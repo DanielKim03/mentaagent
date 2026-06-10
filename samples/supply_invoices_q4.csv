@@ -1,0 +1,16 @@
+Invoice #,Date,Vendor,Item,Quantity,Unit Cost,Total,Status
+INV-2025-1042,2025-10-03,Marin Mill Flour Co.,00 Flour 25kg sack,18,42.00,756.00,Paid
+INV-2025-1043,2025-10-04,North Bay Dairy,Fresh Mozzarella 5lb log,32,28.50,912.00,Paid
+INV-2025-1044,2025-10-04,San Pablo Tomato Cannery,San Marzano DOP #10 can,24,16.80,403.20,Paid
+INV-2025-1051,2025-10-11,Marin Mill Flour Co.,00 Flour 25kg sack,20,42.00,840.00,Paid
+INV-2025-1052,2025-10-11,Berkeley Bulk Olive Oil,EVOO 5L tin,12,38.00,456.00,Paid
+INV-2025-1058,2025-10-18,EcoBox Packaging,12-inch pizza box (case of 100),24,52.00,1248.00,Paid
+INV-2025-1067,2025-10-25,North Bay Dairy,Fresh Mozzarella 5lb log,28,30.80,862.40,Paid
+INV-2025-1068,2025-10-25,North Bay Dairy,Ricotta 3lb tub,16,18.40,294.40,Paid
+INV-2025-1075,2025-11-01,Marin Mill Flour Co.,00 Flour 25kg sack,22,42.00,924.00,Paid
+INV-2025-1083,2025-11-08,San Pablo Tomato Cannery,San Marzano DOP #10 can,30,16.80,504.00,Paid
+INV-2025-1091,2025-11-15,Nimbus Logistics,Van fleet lease + driver hours,1,6700.00,6700.00,Paid
+INV-2025-1098,2025-11-22,EcoBox Packaging,12-inch pizza box (case of 100),20,52.00,1040.00,Outstanding
+INV-2025-1099,2025-11-22,EcoBox Packaging,Compostable cutlery set,40,8.50,340.00,Outstanding
+INV-2025-1107,2025-11-29,North Bay Dairy,Fresh Mozzarella 5lb log,30,30.80,924.00,Outstanding
+INV-2025-1115,2025-12-06,Marin Mill Flour Co.,00 Flour 25kg sack,24,42.00,1008.00,Outstanding

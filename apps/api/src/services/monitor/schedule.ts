@@ -1,0 +1,153 @@
+import { pool } from "../../db/client.js";
+import { callEmbeddings, getEmbeddingsClient } from "../llm/client.js";
+import {
+  createAgentRun,
+  enqueueReflectForSession,
+} from "../agent/runner.js";
+
+// Maintenance sweeps, driven by a single repeatable tick (Mentapath's
+// digest-scheduler fan-out pattern). Each sweep is idempotent and gated on
+// timestamps so a missed/double tick is harmless.
+
+// Chat sessions idle >30min with new content since the last reflection →
+// background reflect run (memory extraction + session summary).
+export async function sweepIdleSessions(): Promise<number> {
+  const { rows } = await pool.query<{ id: string; workspace_id: string }>(
+    `SELECT s.id, s.workspace_id
+       FROM agent_sessions s
+      WHERE s.kind = 'chat'
+        AND NOT EXISTS (SELECT 1 FROM agent_runs r
+                         WHERE r.session_id = s.id AND r.status IN ('queued', 'running'))
+        AND (SELECT MAX(m.created_at) FROM agent_messages m
+              WHERE m.session_id = s.id AND m.role IN ('user', 'assistant'))
+            < NOW() - INTERVAL '30 minutes'
+        AND COALESCE(s.summarized_at, 'epoch'::timestamptz)
+            < (SELECT MAX(m.created_at) FROM agent_messages m
+                WHERE m.session_id = s.id AND m.role IN ('user', 'assistant'))
+      LIMIT 20`
+  );
+  for (const s of rows) {
+    await enqueueReflectForSession(s.workspace_id, s.id);
+  }
+  return rows.length;
+}
+
+// Weekly autonomous review per workspace that has data. The prompt carries
+// the due watchlist items and what changed since the last sweep; the agent
+// replies NOTHING_NOTEWORTHY (suppressed) or files deduped alerts.
+export async function sweepMonitorRuns(): Promise<number> {
+  const { rows } = await pool.query<{ id: string }>(
+    `SELECT w.id FROM workspaces w
+      WHERE COALESCE(w.last_monitor_at, 'epoch'::timestamptz) < NOW() - INTERVAL '7 days'
+        AND EXISTS (SELECT 1 FROM documents d WHERE d.workspace_id = w.id)
+      LIMIT 10`
+  );
+  for (const ws of rows) {
+    const { rows: due } = await pool.query<{ text: string; cadence: string }>(
+      `SELECT text, cadence FROM watch_items
+        WHERE workspace_id = $1 AND next_due_at <= NOW()
+        ORDER BY next_due_at LIMIT 25`,
+      [ws.id]
+    );
+    const { rows: changed } = await pool.query<{ title: string }>(
+      `SELECT d.title FROM documents d
+        JOIN workspaces w ON w.id = d.workspace_id
+       WHERE d.workspace_id = $1
+         AND d.created_at > COALESCE(w.last_monitor_at, 'epoch'::timestamptz)
+       LIMIT 25`,
+      [ws.id]
+    );
+
+    const dueList = due.length
+      ? `Due watchlist items:\n${due.map((d) => `- ${d.text} (${d.cadence})`).join("\n")}`
+      : "No watchlist items are due.";
+    const changedList = changed.length
+      ? `Documents added/updated since the last review:\n${changed.map((d) => `- ${d.title}`).join("\n")}`
+      : "No new documents since the last review.";
+
+    await pool.query(
+      "UPDATE workspaces SET last_monitor_at = NOW() WHERE id = $1",
+      [ws.id]
+    );
+    await createAgentRun({
+      workspaceId: ws.id,
+      kind: "monitor",
+      trigger: "schedule",
+      userMessage: `Scheduled business review.\n\n${dueList}\n\n${changedList}\n\nCheck each due item, look at what changed, and file only genuinely new findings. Mark checked watchlist items complete with update_watchlist.`,
+    });
+  }
+  return rows.length;
+}
+
+// Nightly memory consolidation (OpenClaw "dreaming", mandatory): one cheap
+// run per workspace whose memory changed since the last consolidation.
+export async function sweepConsolidation(): Promise<number> {
+  const { rows } = await pool.query<{ workspace_id: string }>(
+    `SELECT DISTINCT m.workspace_id
+       FROM workspace_memory m
+      WHERE m.updated_at > NOW() - INTERVAL '24 hours'
+        AND NOT EXISTS (
+          SELECT 1 FROM agent_runs r
+           WHERE r.workspace_id = m.workspace_id AND r.kind = 'consolidate'
+             AND r.created_at > NOW() - INTERVAL '20 hours')
+      LIMIT 20`
+  );
+  for (const ws of rows) {
+    await createAgentRun({
+      workspaceId: ws.workspace_id,
+      kind: "consolidate",
+      trigger: "schedule",
+      userMessage:
+        "Run memory maintenance now: merge overlapping entries, drop stale ones, close resolved or expired open loops.",
+    });
+  }
+  return rows.length;
+}
+
+// Embed backfill: chunks that missed embedding (provider hiccup, key added
+// later) get re-tried until done. No-op without an embeddings key.
+export async function sweepEmbedBackfill(): Promise<number> {
+  if (!getEmbeddingsClient()) return 0;
+  const { rows: hasCol } = await pool.query(
+    `SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'chunks' AND column_name = 'embedding'`
+  );
+  if (hasCol.length === 0) return 0;
+
+  const { rows } = await pool.query<{
+    id: string;
+    workspace_id: string;
+    content: string;
+  }>(
+    `SELECT id, workspace_id, content FROM chunks
+      WHERE embedding IS NULL ORDER BY created_at LIMIT 64`
+  );
+  if (rows.length === 0) return 0;
+
+  // Group by workspace so budget metering lands on the right tenant.
+  const byWorkspace = new Map<string, { id: string; content: string }[]>();
+  for (const r of rows) {
+    const list = byWorkspace.get(r.workspace_id) ?? [];
+    list.push({ id: r.id, content: r.content });
+    byWorkspace.set(r.workspace_id, list);
+  }
+  let embedded = 0;
+  for (const [workspaceId, chunks] of byWorkspace) {
+    try {
+      const vectors = await callEmbeddings({
+        workspaceId,
+        input: chunks.map((c) => c.content),
+      });
+      for (let i = 0; i < chunks.length; i++) {
+        await pool.query("UPDATE chunks SET embedding = $2 WHERE id = $1", [
+          chunks[i].id,
+          `[${vectors[i].join(",")}]`,
+        ]);
+        embedded += 1;
+      }
+    } catch (err) {
+      console.error("[backfill] embed failed for workspace", workspaceId, err);
+    }
+  }
+  return embedded;
+}

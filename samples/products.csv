@@ -1,0 +1,17 @@
+SKU,Name,Category,Price,Food Cost,Margin %,Top Seller,Notes
+PIZ-001,Margherita,Classic Pizza,18.00,4.20,76.7,Yes,Best seller across all client segments
+PIZ-002,Pepperoni,Classic Pizza,20.00,5.10,74.5,Yes,Strong with corporate offices
+PIZ-003,Quattro Formaggi,Classic Pizza,22.00,6.80,69.1,No,Lower margin from cheese cost spike Q2
+PIZ-004,Funghi,Classic Pizza,21.00,5.40,74.3,No,
+PIZ-005,Diavola,Classic Pizza,21.00,5.20,75.2,No,
+PIZ-006,Bianca,Classic Pizza,19.00,4.80,74.7,No,
+PIZ-007,Hot Honey Soppressata,Specialty,24.00,6.20,74.2,Yes,Trending; introduced Q3 2024
+PIZ-008,Wild Mushroom Truffle,Specialty,28.00,9.40,66.4,No,Premium; events only
+PIZ-009,Roasted Veg,Specialty,22.00,5.90,73.2,No,
+SAL-001,Caesar,Salad,12.00,2.80,76.7,No,Add-on item
+SAL-002,Mediterranean,Salad,13.00,3.20,75.4,No,Add-on item
+SAL-003,Arugula Pear,Salad,14.00,3.60,74.3,No,Seasonal
+DES-001,Tiramisu,Dessert,8.00,2.20,72.5,No,
+DES-002,Cannoli (3-pack),Dessert,9.00,2.60,71.1,No,
+BEV-001,San Pellegrino,Beverage,4.00,1.10,72.5,No,
+BEV-002,House Lemonade,Beverage,5.00,0.90,82.0,No,Highest-margin item

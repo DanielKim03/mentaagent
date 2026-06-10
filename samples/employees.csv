@@ -1,0 +1,16 @@
+Name,Role,Hired,Annual Salary,Department,Manager,Status
+Maya Chen,Sr. Account Manager,2022-03-15,82000,Sales,Owner,Active
+David Ortiz,Account Manager,2023-01-10,68000,Sales,Maya Chen,Active
+Sam Reyes,Account Manager,2024-04-22,62000,Sales,Maya Chen,Active
+Frankie Russo,Head Pizzaiolo,2021-08-01,75000,Kitchen,Owner,Active
+Diego Alvarez,Pizzaiolo,2023-02-14,52000,Kitchen,Frankie Russo,Active
+Priya Shah,Pizzaiolo,2024-09-30,48000,Kitchen,Frankie Russo,Active
+Tomas Andersen,Prep Cook,2024-06-12,42000,Kitchen,Frankie Russo,Active
+Nia Williams,Operations Manager,2022-11-04,72000,Operations,Owner,Active
+Carlos Mendez,Driver,2023-05-09,46000,Operations,Nia Williams,Active
+Lily Nguyen,Driver,2024-01-30,44000,Operations,Nia Williams,Active
+Marcus Brooks,Driver,2024-07-18,44000,Operations,Nia Williams,Active
+Ava Lindgren,Bookkeeper,2023-08-22,58000,Finance,Owner,Active
+Sebastian Kohl,Marketing Lead,2024-11-05,66000,Marketing,Owner,Active
+Henrietta Bloom,Customer Success,2025-03-12,52000,Sales,Maya Chen,Active
+Jamal Carter,Driver,2023-04-01,46000,Operations,Nia Williams,Departed

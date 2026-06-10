@@ -1,0 +1,15 @@
+Item,Category,On Hand,Unit,Reorder Point,Reorder Quantity,Days Until Stockout,Status
+00 Flour,Ingredients,180,kg,150,500,7,LOW - reorder this week
+Fresh Mozzarella,Ingredients,42,lb,40,150,3,CRITICAL - reorder immediately
+Ricotta,Ingredients,28,lb,15,45,11,OK
+San Marzano Tomatoes,Ingredients,38,#10 cans,30,72,9,OK
+EVOO,Ingredients,86,L,40,60,21,OK
+Pepperoni,Ingredients,18,lb,12,30,5,LOW - reorder this week
+Soppressata,Ingredients,8,lb,8,15,3,LOW - reorder this week
+Wild Mushroom Mix,Ingredients,4,lb,6,12,2,CRITICAL - reorder immediately
+Truffle Oil,Ingredients,2,L,1,3,18,OK
+Arugula,Ingredients,12,lb,10,25,2,OK
+12-inch Pizza Box,Packaging,420,units,500,2400,4,LOW - reorder this week
+9-inch Pizza Box,Packaging,1800,units,800,1200,28,OK
+Compostable Cutlery,Packaging,1200,sets,800,2000,12,OK
+Paper Napkins,Packaging,3600,units,2000,5000,30,OK
