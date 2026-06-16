@@ -16,6 +16,24 @@ export async function sessionRoutes(app: FastifyInstance) {
     return { sessions: rows };
   });
 
+  // The chat session with an in-flight run (queued/running), if any, so the
+  // UI can default back into a conversation that's still being worked on.
+  // Static path — declared before "/:id" so it isn't captured as an id.
+  app.get("/api/sessions/active", async (req) => {
+    const { rows } = await pool.query<{ session_id: string }>(
+      `SELECT s.id AS session_id
+         FROM agent_sessions s
+         JOIN agent_runs r ON r.session_id = s.id
+        WHERE s.workspace_id = $1
+          AND r.kind = 'chat'
+          AND r.status IN ('queued', 'running')
+        ORDER BY r.created_at DESC
+        LIMIT 1`,
+      [req.workspaceId]
+    );
+    return { session_id: rows[0]?.session_id ?? null };
+  });
+
   // Create a chat session.
   app.post("/api/sessions", async (req) => {
     const { rows } = await pool.query<{ id: string }>(
