@@ -19,16 +19,18 @@ export type PlanConfig = {
 };
 
 export const PLANS: Record<PlanTier, PlanConfig> = {
-  // Written to a workspace only via the webhook's cancel path: all caps 0 so
-  // route gates reject cleanly. Brand-new workspaces get their starting values
-  // from the SQL column defaults (migration 001 / 005), not from here.
+  // The freemium floor: a monthly LLM allowance so free (and lapsed/canceled)
+  // workspaces are capped, not unlimited and not hard-blocked. The budget
+  // checker windows this per UTC calendar month. Brand-new workspaces get the
+  // same value from the SQL column default (migration 007) — keep these in
+  // sync. seat/upload limits stay tight.
   free: {
     priceId: null,
     label: "Free",
     priceLabel: "$0",
     seatLimit: 1,
-    llmCapUsdMicros: 0,
-    sourceUploadQuota: 0,
+    llmCapUsdMicros: 1_000_000, // $1/mo of model spend (resets monthly)
+    sourceUploadQuota: null, // uploads still uncapped (migration 005); re-cap separately
   },
   pro: {
     priceId: process.env.PADDLE_PRO_PRICE_ID || null,

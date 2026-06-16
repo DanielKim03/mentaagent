@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/admin";
 import {
   getWorkspaceBilling,
+  getWorkspaceUsage,
   isEntitled,
   PADDLE_CONFIGURED,
   type SubscriptionStatus,
@@ -34,7 +35,20 @@ export default async function BillingPage({
 }) {
   const admin = await requireAdmin();
   const billing = await getWorkspaceBilling(admin.workspaceId);
+  const usage = await getWorkspaceUsage(admin.workspaceId);
   const sp = searchParams ?? {};
+
+  const usedUsd = Number(usage.usedUsdMicros) / 1_000_000;
+  const capUsd =
+    usage.capUsdMicros != null ? Number(usage.capUsdMicros) / 1_000_000 : null;
+  const usedPct =
+    capUsd && capUsd > 0 ? Math.min(100, (usedUsd / capUsd) * 100) : 0;
+  const barTone =
+    usedPct >= 100
+      ? "bg-red-500"
+      : usedPct >= 80
+        ? "bg-amber-500"
+        : "bg-neutral-900";
   const label = statusLabel(billing?.status ?? null);
   const entitled = isEntitled(billing?.status ?? null);
   const hasCustomer = !!billing?.paddleCustomerId;
@@ -92,6 +106,35 @@ export default async function BillingPage({
             </dd>
           </div>
         </dl>
+
+        <div className="mt-6 border-t border-neutral-100 pt-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">AI usage this period</span>
+            <span className="text-neutral-600">
+              ${usedUsd.toFixed(2)}
+              {capUsd != null ? ` / $${capUsd.toFixed(2)}` : " · no cap"}
+            </span>
+          </div>
+          {capUsd != null && (
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+              <div
+                className={`h-full rounded-full ${barTone}`}
+                style={{ width: `${usedPct}%` }}
+              />
+            </div>
+          )}
+          <p className="mt-2 text-xs text-neutral-500">
+            {usage.totalTokens.toLocaleString()} tokens ·{" "}
+            {usage.periodStart
+              ? `resets ${
+                  billing?.currentPeriodEnd
+                    ? new Date(billing.currentPeriodEnd).toLocaleDateString()
+                    : "on renewal"
+                }`
+              : "resets monthly"}
+            {usedPct >= 100 ? " · limit reached — upgrade for more" : ""}
+          </p>
+        </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
           {currentTier !== "pro" && currentTier !== "max" && (

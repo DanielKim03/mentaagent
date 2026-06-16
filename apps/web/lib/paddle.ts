@@ -92,6 +92,46 @@ export async function getWorkspaceBilling(
   };
 }
 
+export type WorkspaceUsage = {
+  usedUsdMicros: bigint;
+  capUsdMicros: bigint | null; // null = no cap (unlimited)
+  totalTokens: number;
+  periodStart: Date | null; // null = windowed on the UTC calendar month
+};
+
+// LLM spend for the current billing period — the exact window the budget
+// checker enforces in apps/api (current_period_start, else the UTC calendar
+// month). Used to show "used / cap" on the billing page.
+export async function getWorkspaceUsage(
+  workspaceId: string
+): Promise<WorkspaceUsage> {
+  const { rows } = await pool.query<{
+    used: string;
+    tokens: string;
+    cap: string | null;
+    period_start: Date | null;
+  }>(
+    `SELECT
+        COALESCE(SUM(u.cost_usd_micros), 0)::text                       AS used,
+        COALESCE(SUM(u.prompt_tokens + u.completion_tokens), 0)::text   AS tokens,
+        (SELECT llm_cap_usd_micros::text FROM workspaces WHERE id = $1)  AS cap,
+        (SELECT current_period_start FROM workspaces WHERE id = $1)      AS period_start
+       FROM llm_usage u
+      WHERE u.workspace_id = $1
+        AND u.created_at >= COALESCE(
+              (SELECT current_period_start FROM workspaces WHERE id = $1),
+              date_trunc('month', NOW() AT TIME ZONE 'UTC'))`,
+    [workspaceId]
+  );
+  const r = rows[0];
+  return {
+    usedUsdMicros: BigInt(r?.used ?? "0"),
+    capUsdMicros: r?.cap != null ? BigInt(r.cap) : null,
+    totalTokens: Number(r?.tokens ?? "0"),
+    periodStart: r?.period_start ?? null,
+  };
+}
+
 export async function ensurePaddleCustomer(args: {
   workspaceId: string;
   workspaceName: string;
