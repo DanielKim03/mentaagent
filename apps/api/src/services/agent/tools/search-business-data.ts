@@ -8,10 +8,10 @@ registerTool({
     "Search across all of this business's documents (semantic + keyword). Returns the most relevant excerpts with their source document. Use this FIRST to find where information lives, then read_document for full context.",
   parameters: z.object({
     query: z.string().min(2).describe("What to search for, in plain language"),
-    top_k: z.number().int().min(1).max(20).default(8).optional(),
+    top_k: z.number().int().min(1).max(20).default(5).optional(),
   }),
   execute: async (args, ctx) => {
-    const hits = await searchChunks(ctx.workspaceId, args.query, args.top_k ?? 8);
+    const hits = await searchChunks(ctx.workspaceId, args.query, args.top_k ?? 5);
     if (hits.length === 0) {
       return "No matches. The information may not have been uploaded yet — check list_documents to see what data this business has shared.";
     }

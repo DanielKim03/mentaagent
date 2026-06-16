@@ -37,7 +37,7 @@ export function toolSchemas(
 
 // Tool results are truncated so one verbose tool can't blow the context
 // budget; the hint teaches the model to page with offset params instead.
-const MAX_RESULT_CHARS = 8_000;
+const MAX_RESULT_CHARS = 5_000;
 
 export function truncateResult(result: string): string {
   if (result.length <= MAX_RESULT_CHARS) return result;

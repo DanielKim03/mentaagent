@@ -32,7 +32,7 @@ async function hasVectorColumn(): Promise<boolean> {
 export async function searchChunks(
   workspaceId: string,
   query: string,
-  topK = 8
+  topK = 5
 ): Promise<RetrievedChunk[]> {
   type SeedRow = { id: string };
   // rank position per chunk id, per signal

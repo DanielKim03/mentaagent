@@ -21,6 +21,9 @@ import { RUN_POLICY } from "./types.js";
 // the terminal status.
 
 const MAX_OUTPUT_TOKENS = 4000;
+// Chat answers should be tight, so cap them lower than report sections — fewer
+// output tokens = faster final reply. Other kinds keep the larger budget.
+const CHAT_MAX_OUTPUT_TOKENS = 1500;
 // ~80K input tokens at ~4 chars/token. Hermes context is 131K; leave head-
 // room for output + safety. Oldest non-system messages are dropped when
 // over (the Phase-2 pre-compaction memory flush hooks in here later).
@@ -199,7 +202,7 @@ export async function runAgentLoop(args: {
           ...messages,
         ]),
         tools: schemas,
-        maxTokens: MAX_OUTPUT_TOKENS,
+        maxTokens: run.kind === "chat" ? CHAT_MAX_OUTPUT_TOKENS : MAX_OUTPUT_TOKENS,
         onDelta: (delta) =>
           emitAgentEvent({ type: "assistant.delta", runId: run.id, seq, delta }),
       });
