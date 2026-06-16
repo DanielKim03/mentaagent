@@ -18,10 +18,14 @@ const schema = z.object({
   // --- LLM (agent brain). Provider-agnostic OpenAI-compatible endpoint.
   // Unset LLM_API_KEY → stub provider: the agent loop runs with canned
   // responses so the whole pipeline is exercisable without spend.
-  LLM_BASE_URL: z.string().url().default("https://api.studio.nebius.com/v1"),
-  LLM_API_KEY: z.string().optional(),
-  AGENT_MODEL: z.string().default("NousResearch/Hermes-4-70B"),
-  HEAVY_MODEL: z.string().default("NousResearch/Hermes-4-405B"),
+  // .trim() on the credentials/URLs/models is load-bearing: a stray leading or
+  // trailing space pasted into a host's env var (e.g. Railway, which stores the
+  // value literally) would otherwise be sent as part of the bearer token and
+  // get rejected with a 401, or break the model name / base URL.
+  LLM_BASE_URL: z.string().trim().url().default("https://api.studio.nebius.com/v1"),
+  LLM_API_KEY: z.string().trim().optional(),
+  AGENT_MODEL: z.string().trim().default("NousResearch/Hermes-4-70B"),
+  HEAVY_MODEL: z.string().trim().default("NousResearch/Hermes-4-405B"),
   // "native" = OpenAI tools param (Nebius Hermes 4); "hermes-xml" = schemas
   // in system prompt + <tool_call> parsing (hosts without native tools).
   LLM_TOOL_MODE: z.enum(["native", "hermes-xml"]).default("native"),
@@ -30,10 +34,11 @@ const schema = z.object({
   // Must produce 1024-dim vectors (chunks.embedding is vector(1024)).
   EMBEDDINGS_BASE_URL: z
     .string()
+    .trim()
     .url()
     .default("https://api.deepinfra.com/v1/openai"),
-  EMBEDDINGS_API_KEY: z.string().optional(),
-  EMBEDDINGS_MODEL: z.string().default("BAAI/bge-m3"),
+  EMBEDDINGS_API_KEY: z.string().trim().optional(),
+  EMBEDDINGS_MODEL: z.string().trim().default("BAAI/bge-m3"),
 
   // Instance-wide soft cap on total LLM spend per UTC day, in whole USD.
   // 0 disables. Fail-safe even if per-workspace gating misbehaves.
