@@ -1,0 +1,26 @@
+**/node_modules
+**/.next
+**/dist
+**/build
+**/.turbo
+
+.git
+.gitignore
+
+# Env files at ANY depth — including the dev-only apps/web/.env.local symlink,
+# which would otherwise dangle in the image and break `next build`.
+.env
+.env.*
+**/.env
+**/.env.local
+**/.env.*.local
+!.env.example
+
+data
+samples
+docker-compose.yml
+.vscode
+.idea
+*.log
+.DS_Store
+coverage
