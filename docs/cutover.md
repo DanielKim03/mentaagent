@@ -1,72 +1,132 @@
 # Cutover: replace Mentapath with MentaAgent on mentapath.com
 
-Chosen path: **fresh start** (new empty DB — existing Mentapath accounts/data
-are NOT carried over), **no active payers** (Paddle/billing intentionally
-dropped for now), **staged** (verify on a temp URL, then repoint the domain;
-instant rollback).
+Chosen path: **in-place** — re-point the three existing Railway Mentapath
+services (API / Worker / Web) at the `DanielKim03/mentapath2` repo, against a
+**fresh empty database**. The custom domain stays attached to the same Web
+service the whole time, so **there is no DNS change and no domain
+detach/reattach**.
 
-This does NOT migrate anything from Mentapath. It stands MentaAgent up as a
-separate deployment, then moves the domain to it.
+- **Fresh start** — new empty Postgres; existing Mentapath accounts/data are
+  NOT carried over.
+- **No active payers** — nothing to migrate, but **Paddle billing IS wired**
+  in this build (landing-page pricing, `/settings/billing`, webhook), so set
+  the `PADDLE_*` vars below to turn it on.
+- **LLM = DeepInfra** (`DeepSeek-V4-Flash`) — one DeepInfra key serves both
+  chat and embeddings.
+
+Prerequisites already done: `mentapath2` pushed to GitHub; a fresh Railway
+Postgres provisioned; Paddle + DeepInfra wired in code.
 
 ---
 
-## Phase 1 — Deploy MentaAgent fresh (nothing user-facing changes yet)
-Do the full [deploy.md](deploy.md) runbook in a **new Railway project** (leave
-Mentapath's project running, untouched):
-- New Postgres (pgvector) + Redis.
-- Three services from `DanielKim03/mentapath2` (API / Worker / Web), per
-  deploy.md.
-- For now set `AUTH_URL` / `WEB_ORIGIN` to the Railway-assigned temp Web URL
-  (`https://<web>.up.railway.app`).
+## 1. Fresh Postgres (+ pgvector)
+You provisioned it already. On the Railway **services**, use its **internal**
+URL (`...railway.internal:5432`) — the public proxy host
+(`*.proxy.rlwy.net`) is only for connecting from your laptop. Use Railway's
+pgvector template; without the `vector` extension, migration `002` no-ops and
+retrieval degrades to FTS-only (app still runs).
 
-## Phase 2 — Verify on the temp URL
-Open the temp Web URL and run the smoke test: sign up, complete onboarding,
-upload a sample CSV, ask a chat question (watch it stream), generate a report,
-check the graph. Mentapath is still live the whole time.
+## 2. Re-point each service's Source → `DanielKim03/mentapath2` (branch `main`)
+The repo layout differs from Mentapath, so after switching the repo you must
+also fix each service's **build config**:
 
-## Phase 3 — Move the connections to MentaAgent
-Reuse what transfers cleanly; the only hard requirement is the LLM key.
-- **Google OAuth** (if used): reuse the existing Google client — the redirect
-  URI `https://mentapath.com/api/auth/callback/google` is identical, so just
-  set `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` on the new Web service. (Also add
-  the temp Railway URL's callback if you want OAuth to work pre-cutover.)
-- **Resend** (optional): reuse the verified `mentapath.com` domain — set
-  `RESEND_API_KEY` + `EMAIL_FROM` on API + Worker.
-- **Sentry** (optional): new project or reuse; set `SENTRY_DSN`.
-- **Paddle**: skip. No payers, and MentaAgent has no billing yet. Leave the
-  old webhook alone (or disable it) — nothing in MentaAgent listens for it.
+| Service | Dockerfile path | Start command | Public networking |
+|---|---|---|---|
+| **API** | `apps/api/Dockerfile` | *(blank — CMD runs migrations then the server)* | on |
+| **Worker** | `apps/api/Dockerfile` | `node apps/api/dist/worker.js` | off |
+| **Web** | `apps/web/Dockerfile` | *(blank)* | on |
 
-## Phase 4 — Repoint the domain (the actual cutover)
-A custom domain in Railway attaches to exactly ONE service. So:
-1. Railway → **old Mentapath Web service** → Settings → Domains → **remove**
-   `mentapath.com`.
-2. Railway → **new MentaAgent Web service** → Settings → Domains → **add**
-   `mentapath.com`. Railway shows a CNAME target.
-3. Cloudflare (or your DNS) → point `mentapath.com` (and `www`) CNAME at the
-   target Railway shows. If it's already a Railway CNAME it may just work; set
-   it to the new target to be safe.
-4. On the new API + Web services, change `AUTH_URL` and `WEB_ORIGIN` to
-   `https://mentapath.com` and redeploy (NextAuth callbacks + CORS depend on
-   these).
+## 3. Environment variables
 
-**Rollback:** re-attach `mentapath.com` to the old Mentapath Web service in
-Railway. That's why the domain swap is the last step.
+**API + Worker** (identical on both):
+```
+DATABASE_URL        = <fresh internal Postgres URL>
+REDIS_URL           = <internal Redis URL>
+INTERNAL_API_SECRET = <32+ char secret — SAME on all three services>
+LLM_BASE_URL        = https://api.deepinfra.com/v1/openai
+LLM_API_KEY         = <your DeepInfra key>
+AGENT_MODEL         = deepseek-ai/DeepSeek-V4-Flash
+HEAVY_MODEL         = deepseek-ai/DeepSeek-V4-Flash
+LLM_TOOL_MODE       = native
+EMBEDDINGS_BASE_URL = https://api.deepinfra.com/v1/openai
+EMBEDDINGS_API_KEY  = <same DeepInfra key>
+EMBEDDINGS_MODEL    = BAAI/bge-m3
+LLM_DAILY_USD_CAP   = 0
+WEB_ORIGIN          = https://mentapath.com
+# Object storage — REQUIRED for the 3-service layout (API writes uploads,
+# Worker reads them; a Railway volume attaches to only one service). Reuse
+# Mentapath's existing R2/S3 bucket.
+S3_BUCKET / S3_ENDPOINT / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY / S3_REGION
+RESEND_API_KEY / EMAIL_FROM   # optional — reuse the verified mentapath.com domain
+```
 
-## Phase 5 — Decommission Mentapath (only after MentaAgent is confirmed live)
-- Stop/delete the old Railway services (web, api, worker) and its Postgres/
-  Redis once you're satisfied.
-- Cancel/disable the old Paddle webhook and any Cloudflare Email Routing /
-  inbound rules tied to the old app.
+**Web**:
+```
+AUTH_SECRET         = <openssl rand -base64 32>
+AUTH_URL            = https://mentapath.com
+WEB_ORIGIN          = https://mentapath.com
+API_INTERNAL_URL    = http://<api>.railway.internal:3001
+INTERNAL_API_SECRET = <same as API/Worker>
+DATABASE_URL        = <same fresh internal Postgres URL>   # NextAuth adapter + signup
+AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET   # reuse the existing Google client (redirect URI is identical)
+# --- Paddle (billing IS wired; set these to turn it on) ---
+PADDLE_API_KEY        = <your Paddle API key>
+PADDLE_ENVIRONMENT    = production          # sandbox while testing
+PADDLE_PRO_PRICE_ID   = pri_...             # Pro plan price id
+PADDLE_MAX_PRICE_ID   = pri_...             # Max plan price id
+PADDLE_WEBHOOK_SECRET = pdl_ntfset_...      # from the Paddle notification destination
+```
+
+## 4. Deploy order & verify
+1. **API** first — build log shows `apply NNN_*.sql` (migrations on the empty
+   DB) then the server listening on `:3001`. Migrations run automatically;
+   **do not** run the seed (dev-only).
+2. **Worker** — logs show `[worker] started: ingest + agent + maintenance` and
+   `[skills] seeded N global skills`.
+3. **Web** — builds and comes up. The moment it deploys, **mentapath.com is
+   serving MentaAgent** (the domain never moved).
+
+Smoke test on the live domain: sign up → onboarding → upload a sample CSV →
+ask a chat question (watch it stream) → generate a report → check the graph.
+
+## 5. Turn on Paddle
+1. Set the `PADDLE_*` vars (step 3) on the Web service.
+2. In the Paddle dashboard, create/point a **notification destination
+   (webhook)** at `https://mentapath.com/api/paddle/webhook` and copy its
+   signing secret into `PADDLE_WEBHOOK_SECRET`.
+3. Use the `pri_...` ids of your Pro/Max prices for `PADDLE_PRO_PRICE_ID` /
+   `PADDLE_MAX_PRICE_ID` (these map to plan tiers in `apps/web/lib/plans.ts`).
+4. Verify: open `/settings/billing` (the "not configured" note disappears once
+   the vars are set), run a checkout, and confirm `subscription.created` lands
+   and flips the workspace plan. Start in `sandbox`, then switch
+   `PADDLE_ENVIRONMENT=production` with live keys when ready.
+
+You can reuse Mentapath's existing Paddle account and products — just repoint
+the webhook destination at the new URL above.
+
+## 6. Decommission the old app (after MentaAgent is confirmed live)
+- Disable the **old** Mentapath Paddle webhook destination (only the new one
+  should be active).
+- Remove any Cloudflare email-routing / inbound rules tied to the old app.
+
+**Rollback:** switch each service's Source back to the old Mentapath repo and
+redeploy.
 
 ---
 
 ## Notes
+- **In-place has no staging on the real domain.** When the Web build deploys,
+  `mentapath.com` flips to the new app instantly, and rollback is a rebuild
+  (a few minutes), not an instant switch. Low-risk here given the fresh DB and
+  no payers; de-risk further by running the app locally against the fresh
+  Railway Postgres first. If you want zero-downtime staging with instant
+  rollback instead, deploy `mentapath2` as *new* services and swap the domain
+  last — but that reintroduces a DNS step.
 - **Name mismatch:** the product is "MentaAgent" but the domain is
-  `mentapath.com`. Purely cosmetic — nothing in the code depends on the name.
-  If you want the UI to read "Mentapath", that's a small branding pass
-  (sidebar logo, titles, landing copy) — ask and I'll do it before cutover.
-- **DNS TTL:** lower the `mentapath.com` record TTL a day before cutover so
-  the switch propagates fast.
-- The dashboard steps (Railway, Cloudflare DNS, Google, Resend) are yours to
-  click — same as the original Mentapath deploy. I can prep anything in the
-  repo (branding, a `railway.json`, env templates).
+  `mentapath.com` — purely cosmetic; nothing in the code depends on the name.
+  Ask if you want a branding pass (sidebar logo, titles, landing copy).
+- **DeepInfra model:** if `DeepSeek-V4-Flash` returns empty/cut-off replies
+  (a reasoning-burn symptom), the proven fallback is DeepSeek's first-party
+  non-thinking model — `LLM_BASE_URL=https://api.deepseek.com`,
+  `AGENT_MODEL=deepseek-chat` (no embeddings endpoint there, so keep
+  `EMBEDDINGS_*` on DeepInfra).

@@ -97,5 +97,11 @@ AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET = <optional, for Google sign-in>
 - **Scheduled work** (weekly/monthly reports, monitor sweeps, nightly memory
   consolidation, dismissed-alert purge) runs off the Worker's 15-min
   maintenance tick — no external cron needed.
-- **Not yet wired** (schema/seams exist): Paddle billing, email-in, connector
-  OAuth. See the plan's "Not built yet" section.
+- **Paddle billing** is wired (landing-page pricing, `/settings/billing`,
+  webhook). It's optional — leave the `PADDLE_*` vars unset and billing shows a
+  "not configured" state; set them on the **Web** service to turn it on
+  (`PADDLE_API_KEY`, `PADDLE_ENVIRONMENT`, `PADDLE_PRO_PRICE_ID`,
+  `PADDLE_MAX_PRICE_ID`, `PADDLE_WEBHOOK_SECRET`; webhook →
+  `https://<your-web-domain>/api/paddle/webhook`). See `apps/web/lib/plans.ts`.
+- **Not yet wired** (schema/seams exist): email-in, connector OAuth. See the
+  plan's "Not built yet" section.
