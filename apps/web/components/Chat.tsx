@@ -155,14 +155,9 @@ export default function Chat({
   }, [initialQuestion]);
 
   const tailRun = useCallback(
-    (rid: string, isFirstMessage: boolean) => {
+    (rid: string, assistantId: string, isFirstMessage: boolean) => {
       const es = new EventSource(`/api/proxy/api/runs/${rid}/events`);
       esRef.current = es;
-      const assistantId = `live-${rid}`;
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantId, role: "assistant", content: "", tools: [], pending: true },
-      ]);
 
       const update = (fn: (m: DisplayMessage) => DisplayMessage) =>
         setMessages((prev) => prev.map((m) => (m.id === assistantId ? fn(m) : m)));
@@ -244,24 +239,30 @@ export default function Chat({
       setBusy(true);
       setInput("");
 
+      // Show the user message AND the analyst's "thinking" placeholder
+      // immediately — before any network round-trip — so it's always clear
+      // the message is being processed.
+      const assistantId = `a-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        { id: `user-${Date.now()}`, role: "user", content: trimmed },
+        { id: assistantId, role: "assistant", content: "", tools: [], pending: true },
+      ]);
+      const fail = (msg: string) => {
+        setError(msg);
+        setBusy(false);
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+      };
+
       let sid = sessionId;
       const isFirstMessage = !sid || messages.length === 0;
       if (!sid) {
         const res = await fetch("/api/proxy/api/sessions", { method: "POST" });
-        if (!res.ok) {
-          setError("Could not start a conversation.");
-          setBusy(false);
-          return;
-        }
+        if (!res.ok) return fail("Could not start a conversation.");
         sid = ((await res.json()) as { session_id: string }).session_id;
         setSessionId(sid);
         window.history.replaceState(null, "", `/chat?session=${sid}`);
       }
-
-      setMessages((prev) => [
-        ...prev,
-        { id: `user-${Date.now()}`, role: "user", content: trimmed },
-      ]);
 
       const res = await fetch(`/api/proxy/api/sessions/${sid}/messages`, {
         method: "POST",
@@ -269,18 +270,12 @@ export default function Chat({
         body: JSON.stringify({ message: trimmed }),
       });
       if (res.status === 402) {
-        setError("You've reached your plan's usage limit this period.");
-        setBusy(false);
-        return;
+        return fail("You've reached your plan's usage limit this period.");
       }
-      if (!res.ok) {
-        setError("Could not send the message.");
-        setBusy(false);
-        return;
-      }
+      if (!res.ok) return fail("Could not send the message.");
       const { run_id } = (await res.json()) as { run_id: string };
       setRunId(run_id);
-      tailRun(run_id, isFirstMessage);
+      tailRun(run_id, assistantId, isFirstMessage);
     },
     [busy, sessionId, messages.length, tailRun]
   );
@@ -353,9 +348,13 @@ export default function Chat({
                         </div>
                       ) : (
                         (m.tools ?? []).length === 0 && (
-                          <div className="flex items-center gap-2 text-sm text-neutral-400">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Thinking…
+                          <div className="flex items-center gap-2 text-sm text-neutral-500">
+                            <span className="flex gap-1">
+                              <span className="h-2 w-2 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.3s]" />
+                              <span className="h-2 w-2 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
+                              <span className="h-2 w-2 animate-bounce rounded-full bg-neutral-400" />
+                            </span>
+                            Analyzing your data…
                           </div>
                         )
                       )}
@@ -374,6 +373,12 @@ export default function Chat({
             <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
             </p>
+          )}
+          {busy && (
+            <div className="mb-2 flex items-center gap-2 text-sm text-neutral-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Menta is analyzing your data…
+            </div>
           )}
           <div className="flex items-end gap-2 rounded-2xl border border-neutral-300 bg-white p-2 shadow-sm focus-within:border-neutral-500 focus-within:ring-2 focus-within:ring-neutral-200">
             <textarea
