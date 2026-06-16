@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { ParsedSheet, ParsedSpreadsheet } from "./types.js";
+import { normalizeCell } from "./cells.js";
 
 // Bounds against a malicious/accidental "spreadsheet bomb" (a small file that
 // expands to millions of cells). `sheetRows` caps the parsed array so the
@@ -13,16 +14,6 @@ const MAX_BYTES = 20 * 1024 * 1024; // 20 MB compressed
 const MAX_SHEETS = 50;
 const MAX_ROWS_PER_SHEET = 5000;
 const MAX_COLS = 256;
-
-// Format a SheetJS Date (local-midnight for date-only cells) as YYYY-MM-DD,
-// adding HH:MM only when the cell actually carries a time.
-function isoDate(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const ymd = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  return d.getHours() || d.getMinutes() || d.getSeconds()
-    ? `${ymd} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-    : ymd;
-}
 
 export async function parseXlsx(buf: Buffer): Promise<ParsedSpreadsheet> {
   if (buf.byteLength > MAX_BYTES) {
@@ -47,15 +38,13 @@ export async function parseXlsx(buf: Buffer): Promise<ParsedSpreadsheet> {
       blankrows: false,
       defval: null,
     });
-    const cell = (v: string | number | Date | null): string | number | null =>
-      v instanceof Date ? isoDate(v) : v;
     const [header = [], ...rest] = aoa;
     return {
       name,
       columns: header.slice(0, MAX_COLS).map((c) => String(c ?? "")),
       rows: rest
         .slice(0, MAX_ROWS_PER_SHEET)
-        .map((r) => r.slice(0, MAX_COLS).map(cell)),
+        .map((r) => r.slice(0, MAX_COLS).map(normalizeCell)),
     };
   });
   return { type: "spreadsheet", sheets };
