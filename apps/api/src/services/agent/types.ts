@@ -66,7 +66,10 @@ export type RunPolicy = {
 // charging customers (see plan §"Budget discipline").
 export const RUN_POLICY: Record<RunKind, RunPolicy> = {
   chat: {
-    maxIterations: 30,
+    // A guardrail, not a target: the prompt steers the agent to answer in
+    // ~1-3 tool calls. 14 caps a pathological over-investigation loop without
+    // truncating a genuinely complex multi-step question.
+    maxIterations: 14,
     costCapUsdMicros: 2_000_000, // $2.00 (testing)
     wallClockMs: 300_000,
     tools: [
