@@ -78,8 +78,9 @@ const PRICING_MICROS_PER_MILLION: Record<
   "deepseek-v4-pro": { input: 435_000, output: 870_000 },
   "deepseek-chat": { input: 140_000, output: 280_000 },
   "deepseek-reasoner": { input: 140_000, output: 280_000 },
-  // Same model hosted on DeepInfra (different namespacing).
+  // Same models hosted on DeepInfra (different namespacing).
   "deepseek-ai/DeepSeek-V4-Flash": { input: 140_000, output: 280_000 },
+  "deepseek-ai/DeepSeek-V4-Pro": { input: 435_000, output: 870_000 },
   // Embeddings ($0.01/M tokens on DeepInfra).
   "BAAI/bge-m3": { input: 10_000, output: 0 },
 };

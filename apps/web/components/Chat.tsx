@@ -27,6 +27,8 @@ type ServerMessage = {
   content: string;
   tool_calls: { function: { name: string } }[] | null;
   name: string | null;
+  run_id: string;
+  run_status: string;
 };
 
 const TOOL_LABELS: Record<string, string> = {
@@ -129,6 +131,33 @@ export default function Chat({
       }
       setMessages(display);
       jumpToBottom.current = true; // opening a past chat → start at the bottom
+
+      // The agent runs in the worker, so a run keeps going even after you
+      // navigate away. If one is still in flight for this session, re-attach
+      // its live stream so the chat visibly keeps thinking and lands the answer
+      // when you come back (rather than looking frozen on the last snapshot).
+      const live = [...data.messages]
+        .reverse()
+        .find((m) => m.run_status === "running" || m.run_status === "queued");
+      if (live) {
+        const last = display[display.length - 1];
+        let assistantId: string;
+        if (last && last.role === "assistant") {
+          assistantId = last.id;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, pending: true } : m))
+          );
+        } else {
+          assistantId = `a-resume-${live.run_id}`;
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: "assistant", content: "", tools: [], pending: true },
+          ]);
+        }
+        setBusy(true);
+        setRunId(live.run_id);
+        tailRun(live.run_id, assistantId, false);
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSessionId]);
