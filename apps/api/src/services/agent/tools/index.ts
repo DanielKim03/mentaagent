@@ -3,6 +3,7 @@
 import "./search-business-data.js";
 import "./read-document.js";
 import "./list-documents.js";
+import "./get-data-overview.js";
 import "./get-business-profile.js";
 import "./run-calculation.js";
 import "./aggregate-table.js";

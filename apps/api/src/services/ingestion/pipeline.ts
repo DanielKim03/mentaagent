@@ -9,6 +9,7 @@ import {
 import { parseSource } from "./parse.js";
 import { chunkSheet, chunkText, type Chunk } from "./chunk.js";
 import type { ParsedSource } from "./parsers/types.js";
+import { computeSpreadsheetStats } from "./stats.js";
 import { extractDocumentEntities } from "../graph/entities.js";
 
 // Upload → document → chunks → embeddings → summary. Replaces Mentapath's
@@ -216,6 +217,11 @@ export async function processSource(args: {
   );
   const text = renderText(parsed);
   const chunks = buildChunks(parsed, text);
+  // Deterministic column stats (sums, ranges, top values) precomputed once at
+  // ingest so the agent answers totals/top-N/date-range questions from the
+  // overview instead of reading raw rows + aggregating live at query time.
+  const stats =
+    parsed.type === "spreadsheet" ? computeSpreadsheetStats(parsed) : null;
 
   const { documentId, chunkRows } = await upsertDocument({
     workspaceId: args.workspaceId,
@@ -233,8 +239,8 @@ export async function processSource(args: {
     text
   );
   await pool.query(
-    "UPDATE documents SET summary = $2, doc_type = $3 WHERE id = $1",
-    [documentId, summary, docType]
+    "UPDATE documents SET summary = $2, doc_type = $3, metadata = $4 WHERE id = $1",
+    [documentId, summary, docType, JSON.stringify(stats ? { stats } : {})]
   );
 
   // Build the knowledge-graph edges (entities this document mentions).
