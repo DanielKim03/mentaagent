@@ -11,6 +11,7 @@ import {
   Brain,
   BookOpen,
   Settings,
+  CreditCard,
 } from "lucide-react";
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/memory", label: "Memory", icon: Brain },
   { href: "/skills", label: "Skills", icon: BookOpen },
   { href: "/onboarding", label: "Profile", icon: Settings },
+  { href: "/settings/billing", label: "Billing", icon: CreditCard },
 ];
 
 export default function SidebarNav() {

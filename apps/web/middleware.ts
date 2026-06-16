@@ -10,8 +10,12 @@ export default auth((req) => {
   if (
     pathname === "/" ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/paddle") || // Paddle webhook authenticates by HMAC, not session
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
+    pathname === "/refund" ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
   ) {
@@ -31,5 +35,5 @@ export const config = {
   // so the chat would only render once the whole run finished instead of
   // streaming live. Keeping the proxy out of middleware lets events flush
   // incrementally.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/proxy|sw.js).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/proxy|api/paddle|sw.js).*)"],
 };
