@@ -6,15 +6,15 @@ type SessionRow = { id: string; title: string | null; created_at: string };
 export default async function ChatPage({
   searchParams,
 }: {
-  searchParams: { session?: string; ask?: string };
+  searchParams: { session?: string; ask?: string; new?: string };
 }) {
   const { sessions } = await apiGet<{ sessions: SessionRow[] }>("/api/sessions");
 
-  // Default into a still-running conversation when the user opens chat with no
-  // specific session (and isn't starting a fresh ?ask= question), so coming
-  // back lands them in the chat that's still thinking.
+  // Opening Chat from another section (plain /chat) drops you back into a
+  // still-running conversation so it "follows" you. Skip this when explicitly
+  // starting fresh (?new=1 from the New button) or auto-asking (?ask=).
   let activeId = searchParams.session ?? null;
-  if (!activeId && !searchParams.ask) {
+  if (!activeId && !searchParams.ask && !searchParams.new) {
     const { session_id } = await apiGet<{ session_id: string | null }>(
       "/api/sessions/active"
     );

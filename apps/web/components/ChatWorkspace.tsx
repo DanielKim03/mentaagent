@@ -40,7 +40,7 @@ export default function ChatWorkspace({
 
   async function remove(id: string) {
     await fetch(`/api/proxy/api/sessions/${id}`, { method: "DELETE" });
-    if (id === activeId) router.push("/chat");
+    if (id === activeId) router.push("/chat?new=1");
     else router.refresh();
   }
 
@@ -131,7 +131,7 @@ export default function ChatWorkspace({
           )}
         </div>
         <Link
-          href="/chat"
+          href="/chat?new=1"
           className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
         >
           <Plus className="h-4 w-4" />
