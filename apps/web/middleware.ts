@@ -26,5 +26,10 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Exclude /api/proxy: it does its own auth (see the proxy route), and
+  // routing SSE/streaming responses through Edge middleware BUFFERS them —
+  // so the chat would only render once the whole run finished instead of
+  // streaming live. Keeping the proxy out of middleware lets events flush
+  // incrementally.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/proxy).*)"],
 };

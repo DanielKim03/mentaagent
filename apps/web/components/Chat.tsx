@@ -90,6 +90,7 @@ export default function Chat({
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const esRef = useRef<EventSource | null>(null);
+  const jumpToBottom = useRef(false);
   const router = useRouter();
 
   // Load transcript when a session exists.
@@ -122,13 +123,22 @@ export default function Chat({
         }
       }
       setMessages(display);
+      jumpToBottom.current = true; // opening a past chat → start at the bottom
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  // Auto-scroll, but only when the user is already near the bottom.
+  // When a past conversation is opened, jump straight to the bottom (most
+  // recent messages). After that, auto-scroll only when already near the
+  // bottom so we don't yank the view while the user reads scrollback.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    if (jumpToBottom.current) {
+      jumpToBottom.current = false;
+      el.scrollTop = el.scrollHeight; // instant
+      return;
+    }
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
     if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages]);
