@@ -101,7 +101,7 @@ export default async function SignupPage({
         </Link>
         <h1 className="mt-4 text-2xl font-bold">Create your account</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Two minutes to your own AI business analyst.
+          Set up your AI business analyst in minutes.
         </p>
       </div>
       {errMsg && (
