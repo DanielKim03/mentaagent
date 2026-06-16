@@ -31,7 +31,12 @@ openssl rand -hex 32      # CONNECTOR_KEY        (only needed once connectors sh
 
 ### 3.1 API
 - Build → Dockerfile: `apps/api/Dockerfile`
-- Public networking: **on** (note the `<api>.up.railway.app` URL).
+- Public networking: **off** (recommended). The web service reaches the API
+  over the private network (`API_INTERNAL_URL=http://<api>.railway.internal:3001`),
+  so the API needs no public URL — keeping it private removes attack surface.
+  Even though `lib/auth.ts` requires the bearer secret + a real membership, a
+  publicly-reachable API is needless exposure. Enable public networking only
+  temporarily if you need to smoke-test the API directly, then turn it back off.
 - Start Command: leave blank (Dockerfile CMD runs migrations then the server).
 
 ### 3.2 Worker

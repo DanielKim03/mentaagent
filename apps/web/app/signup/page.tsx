@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { auth, signIn } from "@/auth";
 import { pool } from "@/lib/db";
 import { TURNSTILE_SITE_KEY, verifyTurnstile } from "@/lib/turnstile";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { Turnstile } from "@/components/Turnstile";
 
 export default async function SignupPage({
@@ -17,6 +18,13 @@ export default async function SignupPage({
 
   async function signup(formData: FormData) {
     "use server";
+
+    // IP rate limit first — rejects before captcha verify, bcrypt, and DB work.
+    const rl = await checkRateLimit("signup", { max: 5, windowSeconds: 60 });
+    if (!rl.ok) {
+      redirect("/signup?error=rate_limited");
+    }
+
     const name = String(formData.get("name") ?? "").trim();
     const businessName = String(formData.get("business") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -87,6 +95,8 @@ export default async function SignupPage({
         ? "Please agree to the Terms of Service and Privacy Policy."
         : searchParams.error === "captcha"
           ? "Captcha verification failed. Reload the page and try again."
+          : searchParams.error === "rate_limited"
+            ? "Too many sign-up attempts from your network. Wait a minute and try again."
           : searchParams.error === "invalid"
             ? "Fill in every field; password needs 8+ characters."
             : searchParams.error
