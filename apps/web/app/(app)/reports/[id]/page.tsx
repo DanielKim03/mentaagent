@@ -23,17 +23,20 @@ type ReportDetail = {
   sections: Section[];
 };
 
-function ScoreChip({ score }: { score: number | null }) {
+function ScoreChip({ score, large }: { score: number | null; large?: boolean }) {
   if (score === null) return null;
   const tone =
     score >= 70
-      ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
+      ? "bg-green-100 text-green-700"
       : score >= 40
-        ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-        : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300";
+        ? "bg-amber-100 text-amber-700"
+        : "bg-red-100 text-red-700";
   return (
-    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${tone}`}>
-      {score}/100
+    <span
+      className={`rounded-full font-semibold ${tone} ${large ? "px-4 py-1.5 text-base" : "px-3 py-1 text-sm"}`}
+    >
+      {score}
+      {large ? "/100" : ""}
     </span>
   );
 }
@@ -47,47 +50,39 @@ export default async function ReportDetailPage({
   if (res.status === 404) notFound();
   if (!res.ok) throw new Error("failed to load report");
   const { report, sections } = (await res.json()) as ReportDetail;
+  const written = sections.filter((s) => s.status === "written");
+  const pending = sections.filter((s) => s.status === "pending");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 print:max-w-none">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-3xl space-y-8 p-6 md:p-8 print:max-w-none">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{report.title}</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-2xl font-bold tracking-tight">{report.title}</h1>
+          <p className="mt-1 text-sm text-neutral-500">
             {new Date(report.created_at).toLocaleDateString()} ·{" "}
             {report.status === "generating"
               ? "still generating — refresh in a minute"
               : report.status}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <ScoreChip score={report.overall_score} />
-        </div>
+        <ScoreChip score={report.overall_score} large />
       </div>
 
-      {sections
-        .filter((s) => s.status === "written")
-        .map((s) => (
-          <section key={s.section_key} className="space-y-2">
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-800">
-              <h2 className="text-lg font-semibold">{s.title}</h2>
-              <ScoreChip score={s.score} />
-            </div>
-            <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {s.content_md}
-              </ReactMarkdown>
-            </div>
-          </section>
-        ))}
+      {written.map((s) => (
+        <section key={s.section_key} className="space-y-3">
+          <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-2">
+            <h2 className="text-lg font-semibold">{s.title}</h2>
+            <ScoreChip score={s.score} />
+          </div>
+          <div className="prose prose-neutral max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{s.content_md}</ReactMarkdown>
+          </div>
+        </section>
+      ))}
 
-      {sections.some((s) => s.status === "pending") && (
-        <p className="text-sm text-neutral-500">
-          Sections still being investigated:{" "}
-          {sections
-            .filter((s) => s.status === "pending")
-            .map((s) => s.title)
-            .join(", ")}
+      {pending.length > 0 && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          Still investigating: {pending.map((s) => s.title).join(", ")} — refresh shortly.
         </p>
       )}
     </div>

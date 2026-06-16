@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2, Sparkles } from "lucide-react";
 
 export default function GenerateReportButton() {
   const [busy, setBusy] = useState(false);
@@ -25,13 +26,18 @@ export default function GenerateReportButton() {
   }
 
   return (
-    <div>
+    <div className="shrink-0 text-right">
       <button
         onClick={() => void generate()}
         disabled={busy}
-        className="rounded-md bg-neutral-900 px-4 py-2 font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+        className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50"
       >
-        {busy ? "Starting…" : "Generate Business Health Report"}
+        {busy ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Sparkles className="h-4 w-4" />
+        )}
+        {busy ? "Starting…" : "Generate report"}
       </button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

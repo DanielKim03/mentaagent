@@ -3,9 +3,38 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+  @apply bg-neutral-50 text-neutral-900 antialiased;
+}
+
+/* Soft, unobtrusive scrollbars (Claude-like). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 212) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 212);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background-color: theme("colors.neutral.300");
+}
+
+/* Tighten the prose used for assistant messages + reports. */
+.prose :where(p):first-child {
+  margin-top: 0;
+}
+.prose :where(p):last-child {
+  margin-bottom: 0;
 }

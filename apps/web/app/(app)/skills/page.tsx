@@ -17,10 +17,10 @@ export default async function SkillsPage() {
   const active = skills.filter((s) => s.status === "active");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8 p-6 md:p-8">
       <div>
-        <h1 className="text-2xl font-bold">Analysis playbooks</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-2xl font-bold tracking-tight">Analysis playbooks</h1>
+        <p className="mt-1 text-sm text-neutral-500">
           The methods your analyst follows. It proposes new playbooks as it
           learns your business — you approve them.
         </p>
@@ -32,34 +32,30 @@ export default async function SkillsPage() {
           {proposed.map((s) => (
             <div
               key={s.id}
-              className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950"
+              className="rounded-xl border border-amber-300 bg-amber-50 p-4"
             >
               <p className="font-medium">{s.name}</p>
-              <p className="mb-3 mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                {s.description}
-              </p>
+              <p className="mb-3 mt-1 text-sm text-neutral-600">{s.description}</p>
               <SkillReview skillId={s.id} />
             </div>
           ))}
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {active.map((s) => (
           <div
             key={s.id}
-            className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+            className="rounded-xl border border-neutral-200 bg-white p-4"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <p className="font-medium">{s.name}</p>
-              <span className="text-xs text-neutral-500">
+              <span className="shrink-0 text-xs text-neutral-500">
                 {s.workspace_id ? "learned for your business" : "standard"} ·
                 used {s.use_count}×
               </span>
             </div>
-            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-              {s.description}
-            </p>
+            <p className="mt-1 text-sm text-neutral-600">{s.description}</p>
           </div>
         ))}
       </div>

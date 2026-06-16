@@ -22,10 +22,13 @@ import {
 import { handleAgentJob } from "./services/agent/runner.js";
 import { processSource } from "./services/ingestion/pipeline.js";
 import {
+  backfillEntities,
   sweepConsolidation,
+  sweepDismissedAlerts,
   sweepEmbedBackfill,
   sweepIdleSessions,
   sweepMonitorRuns,
+  sweepScheduledReports,
 } from "./services/monitor/schedule.js";
 import { seedGlobalSkills } from "./services/skills/store.js";
 
@@ -77,7 +80,7 @@ const ingestWorker = new Worker<IngestJobData>(
       throw err;
     }
   },
-  { connection: redisConnection, concurrency: 2 }
+  { connection: redisConnection, concurrency: 4 }
 );
 ingestWorker.on("error", (err) => console.error("[ingest worker] error:", err));
 
@@ -100,15 +103,19 @@ const maintenanceQueue = new Queue(MAINTENANCE_QUEUE, {
 const maintenanceWorker = new Worker(
   MAINTENANCE_QUEUE,
   async () => {
-    const [reflected, monitored, consolidated, embedded] = await Promise.all([
-      sweepIdleSessions(),
-      sweepMonitorRuns(),
-      sweepConsolidation(),
-      sweepEmbedBackfill(),
-    ]);
-    if (reflected || monitored || consolidated || embedded) {
+    const [reflected, monitored, consolidated, embedded, entities, reports, purged] =
+      await Promise.all([
+        sweepIdleSessions(),
+        sweepMonitorRuns(),
+        sweepConsolidation(),
+        sweepEmbedBackfill(),
+        backfillEntities(),
+        sweepScheduledReports(),
+        sweepDismissedAlerts(),
+      ]);
+    if (reflected || monitored || consolidated || embedded || entities || reports || purged) {
       console.log(
-        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded}`
+        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded} entities=${entities} reports=${reports} purged=${purged}`
       );
     }
   },

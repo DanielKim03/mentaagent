@@ -9,6 +9,7 @@ import {
 import { parseSource } from "./parse.js";
 import { chunkSheet, chunkText, type Chunk } from "./chunk.js";
 import type { ParsedSource } from "./parsers/types.js";
+import { extractDocumentEntities } from "../graph/entities.js";
 
 // Upload → document → chunks → embeddings → summary. Replaces Mentapath's
 // wiki planner/executor with a faithful-raw-text knowledge layer: the agent
@@ -235,6 +236,14 @@ export async function processSource(args: {
     "UPDATE documents SET summary = $2, doc_type = $3 WHERE id = $1",
     [documentId, summary, docType]
   );
+
+  // Build the knowledge-graph edges (entities this document mentions).
+  await extractDocumentEntities({
+    workspaceId: args.workspaceId,
+    documentId,
+    title: source.filename,
+    text,
+  });
 
   await pool.query(
     `INSERT INTO activity_log (workspace_id, action, description, details)

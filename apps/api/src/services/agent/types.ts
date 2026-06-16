@@ -60,11 +60,15 @@ export type RunPolicy = {
   model: "agent" | "heavy";
 };
 
+// NOTE: caps are LOOSENED for the testing phase so runs aren't cut short
+// mid-task. The iteration counts and a runaway-loop wall clock remain as
+// backstops, but the per-run dollar caps are generous. Tighten these before
+// charging customers (see plan §"Budget discipline").
 export const RUN_POLICY: Record<RunKind, RunPolicy> = {
   chat: {
-    maxIterations: 12,
-    costCapUsdMicros: 100_000, // $0.10
-    wallClockMs: 120_000,
+    maxIterations: 30,
+    costCapUsdMicros: 2_000_000, // $2.00 (testing)
+    wallClockMs: 300_000,
     tools: [
       "search_business_data",
       "read_document",
@@ -72,6 +76,7 @@ export const RUN_POLICY: Record<RunKind, RunPolicy> = {
       "get_business_profile",
       "run_calculation",
       "aggregate_table",
+      "find_connections",
       "create_alert",
       "remember",
       "use_skill",
@@ -81,8 +86,29 @@ export const RUN_POLICY: Record<RunKind, RunPolicy> = {
     model: "agent",
   },
   report: {
+    // 7 dimensions share this budget; a single messy dimension (e.g. decoding
+    // Excel serial dates) can burn 15-20 iterations, so give the whole report
+    // generous room to finish all sections. Cost is still capped below.
+    maxIterations: 200,
+    costCapUsdMicros: 20_000_000, // $20.00 (testing)
+    wallClockMs: 1_200_000,
+    tools: [
+      "search_business_data",
+      "read_document",
+      "list_documents",
+      "get_business_profile",
+      "run_calculation",
+      "aggregate_table",
+      "find_connections",
+      "create_alert",
+      "use_skill",
+      "write_report_section",
+    ],
+    model: "agent",
+  },
+  monitor: {
     maxIterations: 40,
-    costCapUsdMicros: 2_000_000, // $2.00
+    costCapUsdMicros: 5_000_000, // $5.00 (testing)
     wallClockMs: 600_000,
     tools: [
       "search_business_data",
@@ -91,23 +117,7 @@ export const RUN_POLICY: Record<RunKind, RunPolicy> = {
       "get_business_profile",
       "run_calculation",
       "aggregate_table",
-      "create_alert",
-      "use_skill",
-      "write_report_section",
-    ],
-    model: "agent",
-  },
-  monitor: {
-    maxIterations: 15,
-    costCapUsdMicros: 500_000, // $0.50
-    wallClockMs: 300_000,
-    tools: [
-      "search_business_data",
-      "read_document",
-      "list_documents",
-      "get_business_profile",
-      "run_calculation",
-      "aggregate_table",
+      "find_connections",
       "create_alert",
       "remember",
       "use_skill",
@@ -117,16 +127,16 @@ export const RUN_POLICY: Record<RunKind, RunPolicy> = {
     model: "agent",
   },
   reflect: {
-    maxIterations: 8,
-    costCapUsdMicros: 30_000, // $0.03
-    wallClockMs: 120_000,
+    maxIterations: 15,
+    costCapUsdMicros: 200_000, // $0.20 (testing)
+    wallClockMs: 180_000,
     tools: ["remember", "propose_skill", "update_watchlist"],
     model: "agent",
   },
   consolidate: {
-    maxIterations: 8,
-    costCapUsdMicros: 30_000, // $0.03
-    wallClockMs: 120_000,
+    maxIterations: 15,
+    costCapUsdMicros: 200_000, // $0.20 (testing)
+    wallClockMs: 180_000,
     tools: ["remember"],
     model: "agent",
   },

@@ -16,3 +16,6 @@ data/*/
 .vscode/
 .idea/
 coverage/
+
+# TS incremental build cache
+*.tsbuildinfo

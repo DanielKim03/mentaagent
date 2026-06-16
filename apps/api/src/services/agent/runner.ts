@@ -2,6 +2,7 @@ import { pool } from "../../db/client.js";
 import { agentQueue } from "../../queue/queue.js";
 import { emitAgentEvent } from "../../queue/events.js";
 import { runReportOrchestration } from "../report/orchestrator.js";
+import { emailReport } from "../report/email.js";
 import { buildSystemPrompt } from "./prompts.js";
 import { runAgentLoop } from "./loop.js";
 import type { ChatMessage, NormalizedToolCall, RunKind } from "./types.js";
@@ -114,7 +115,7 @@ export async function handleAgentJob(data: {
   workspaceId: string;
 }): Promise<void> {
   const { rows } = await pool.query(
-    `SELECT id, workspace_id, session_id, kind, iterations, max_iterations,
+    `SELECT id, workspace_id, session_id, kind, trigger, iterations, max_iterations,
             cost_cap_usd_micros::text, cost_usd_micros::text, report_id, model, status
        FROM agent_runs WHERE id = $1 AND workspace_id = $2`,
     [data.runId, data.workspaceId]
@@ -189,9 +190,17 @@ export async function handleAgentJob(data: {
 }
 
 // Post-run hooks: reflect runs write the session summary; chat sessions get
-// titled from their first user message.
+// titled from their first user message; finished scheduled reports get
+// emailed to the workspace's members.
 async function afterRun(
-  run: { id: string; workspace_id: string; session_id: string | null; kind: RunKind },
+  run: {
+    id: string;
+    workspace_id: string;
+    session_id: string | null;
+    kind: RunKind;
+    trigger?: string;
+    report_id?: string | null;
+  },
   status: string,
   finalText: string
 ): Promise<void> {
@@ -212,6 +221,23 @@ async function afterRun(
         WHERE s.id = $1 AND s.title IS NULL`,
       [run.session_id]
     );
+  }
+  if (run.kind === "report" && run.report_id) {
+    if (status === "done") {
+      // Scheduled reports get emailed to the workspace's members once ready.
+      if (run.trigger === "schedule") {
+        await emailReport(run.report_id).catch((err) =>
+          console.error("[runner] report email failed:", err)
+        );
+      }
+    } else {
+      // A crashed/cancelled report run must not leave the report stuck in
+      // 'generating' (that would block future reports for this workspace).
+      await pool.query(
+        "UPDATE reports SET status = 'failed' WHERE id = $1 AND status = 'generating'",
+        [run.report_id]
+      );
+    }
   }
 }
 

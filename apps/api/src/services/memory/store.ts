@@ -200,7 +200,10 @@ export async function renderMemoryForPrompt(
     const list = byCategory.get(cat);
     if (!list?.length) continue;
     const lines = list.map((r) => {
-      const due = r.due_at ? ` (due ${r.due_at.slice(0, 10)})` : "";
+      // due_at comes back from pg as a Date (or string) — normalize to YYYY-MM-DD.
+      const due = r.due_at
+        ? ` (due ${new Date(r.due_at).toISOString().slice(0, 10)})`
+        : "";
       return `- ${r.content}${due}`;
     });
     parts.push(`### ${CATEGORY_LABELS[cat]}\n${lines.join("\n")}`);

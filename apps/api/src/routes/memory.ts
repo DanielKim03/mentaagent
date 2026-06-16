@@ -33,7 +33,10 @@ export async function memoryRoutes(app: FastifyInstance) {
   app.get("/api/memory/export", async (req, reply) => {
     const rows = await listMemory(req.workspaceId);
     const text = rows
-      .map((r) => `[${r.category}] ${r.content}${r.due_at ? ` (due ${r.due_at.slice(0, 10)})` : ""}`)
+      .map(
+        (r) =>
+          `[${r.category}] ${r.content}${r.due_at ? ` (due ${new Date(r.due_at).toISOString().slice(0, 10)})` : ""}`
+      )
       .join("\n");
     reply.header("Content-Type", "text/plain; charset=utf-8");
     reply.header("Content-Disposition", "attachment; filename=analyst-memory.txt");

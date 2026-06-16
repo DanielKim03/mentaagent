@@ -26,6 +26,29 @@ export async function sessionRoutes(app: FastifyInstance) {
     return { session_id: rows[0].id };
   });
 
+  // Rename a conversation.
+  const renameSchema = z.object({ title: z.string().min(1).max(120) });
+  app.patch<{ Params: { id: string } }>("/api/sessions/:id", async (req, reply) => {
+    const parsed = renameSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "title required" });
+    const { rowCount } = await pool.query(
+      "UPDATE agent_sessions SET title = $3 WHERE id = $1 AND workspace_id = $2",
+      [req.params.id, req.workspaceId, parsed.data.title]
+    );
+    if ((rowCount ?? 0) === 0) return reply.code(404).send({ error: "not found" });
+    return { updated: true };
+  });
+
+  // Delete a conversation (cascades runs + messages).
+  app.delete<{ Params: { id: string } }>("/api/sessions/:id", async (req, reply) => {
+    const { rowCount } = await pool.query(
+      "DELETE FROM agent_sessions WHERE id = $1 AND workspace_id = $2",
+      [req.params.id, req.workspaceId]
+    );
+    if ((rowCount ?? 0) === 0) return reply.code(404).send({ error: "not found" });
+    return { deleted: true };
+  });
+
   // Session transcript: user/assistant text + tool activity for the UI.
   app.get<{ Params: { id: string } }>("/api/sessions/:id", async (req, reply) => {
     const { rows: sessions } = await pool.query(

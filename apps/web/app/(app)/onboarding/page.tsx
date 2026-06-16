@@ -45,19 +45,19 @@ export default async function OnboardingPage({
   }
 
   const field =
-    "rounded-md border border-neutral-300 bg-transparent px-3 py-2 dark:border-neutral-700";
+    "rounded-lg border border-neutral-300 bg-white px-3 py-2.5 outline-none transition-colors focus:border-neutral-500 focus:ring-2 focus:ring-neutral-200";
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-xl space-y-6 p-6 md:p-8">
       <div>
-        <h1 className="text-2xl font-bold">Tell your analyst about the business</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-2xl font-bold tracking-tight">Tell your analyst about the business</h1>
+        <p className="mt-1 text-sm text-neutral-500">
           This grounds every analysis. Five minutes here makes every answer
           sharper. No technical questions — ever.
         </p>
       </div>
       {searchParams.saved && (
-        <p className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-300">
+        <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
           Saved. Your analyst will use this from the next conversation.
         </p>
       )}
@@ -145,7 +145,7 @@ export default async function OnboardingPage({
         </label>
         <button
           type="submit"
-          className="rounded-md bg-neutral-900 px-4 py-2 font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900"
+          className="rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white transition-colors hover:bg-neutral-700"
         >
           Save profile
         </button>

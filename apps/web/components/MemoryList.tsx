@@ -67,7 +67,7 @@ export default function MemoryList({ memory }: { memory: MemoryRow[] }) {
               .map((m) => (
                 <li
                   key={m.id}
-                  className="group rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
+                  className="group rounded-lg border border-neutral-200 bg-white p-3"
                 >
                   {editing === m.id ? (
                     <form
@@ -80,7 +80,7 @@ export default function MemoryList({ memory }: { memory: MemoryRow[] }) {
                       <input
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        className="flex-1 rounded-md border border-neutral-300 bg-transparent px-2 py-1 text-sm dark:border-neutral-700"
+                        className="flex-1 rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm focus:border-neutral-500 outline-none"
                         autoFocus
                       />
                       <button type="submit" className="text-sm underline">

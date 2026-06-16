@@ -11,6 +11,7 @@ import { pool } from "./db/client.js";
 import { registerAuthHook } from "./lib/auth.js";
 import { BudgetExceededError } from "./services/llm/client.js";
 import { alertsRoutes } from "./routes/alerts.js";
+import { graphRoutes } from "./routes/graph.js";
 import { memoryRoutes } from "./routes/memory.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { runRoutes } from "./routes/runs.js";
@@ -115,6 +116,7 @@ export async function buildApp() {
   await app.register(memoryRoutes);
   await app.register(skillsRoutes);
   await app.register(alertsRoutes);
+  await app.register(graphRoutes);
   await app.register(workspaceRoutes);
 
   return app;

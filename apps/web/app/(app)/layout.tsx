@@ -1,16 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { auth, signOut } from "@/auth";
-
-const NAV = [
-  { href: "/chat", label: "Chat" },
-  { href: "/reports", label: "Reports" },
-  { href: "/alerts", label: "Alerts" },
-  { href: "/sources", label: "Data" },
-  { href: "/memory", label: "Memory" },
-  { href: "/skills", label: "Skills" },
-  { href: "/onboarding", label: "Profile" },
-];
+import SidebarNav from "@/components/SidebarNav";
+import AppShell from "@/components/AppShell";
 
 export default async function AppLayout({
   children,
@@ -25,33 +18,29 @@ export default async function AppLayout({
     await signOut({ redirectTo: "/" });
   }
 
-  return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-52 shrink-0 flex-col border-r border-neutral-200 p-4 dark:border-neutral-800">
-        <Link href="/chat" className="mb-6 text-lg font-bold">
-          MentaAgent
-        </Link>
-        <nav className="flex flex-col gap-1">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto pt-4 text-xs text-neutral-500">
-          <p className="truncate">{session.user.email}</p>
-          <form action={logout}>
-            <button type="submit" className="mt-1 underline">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </aside>
-      <main className="min-w-0 flex-1 p-6">{children}</main>
-    </div>
+  const sidebar = (
+    <>
+      <Link href="/chat" className="mb-6 flex items-center gap-2 px-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 text-sm font-bold text-white">
+          M
+        </span>
+        <span className="text-base font-semibold tracking-tight">MentaAgent</span>
+      </Link>
+      <SidebarNav />
+      <div className="mt-auto border-t border-neutral-200 pt-3">
+        <p className="truncate px-2 text-xs text-neutral-500">{session.user.email}</p>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-200/60 hover:text-neutral-900"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </button>
+        </form>
+      </div>
+    </>
   );
+
+  return <AppShell sidebar={sidebar}>{children}</AppShell>;
 }

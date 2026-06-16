@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ArrowUp, Square, Check, Loader2, Sparkles } from "lucide-react";
 
-// The chat surface: sends a message (202 + run id), then tails the run's SSE
-// stream — assistant text deltas render live, tool calls show as activity
-// lines ("Searching contracts…"), and a reconnect falls back to fetching the
-// run from the DB. All requests go through /api/proxy/*.
+// Claude.ai-style chat surface: sends a message (202 + run id), then tails
+// the run's SSE stream — assistant text deltas render live, tool calls show
+// as a tidy "working" group, and a reconnect falls back to fetching the run
+// from the DB. Stop button cancels an in-flight run. All via /api/proxy/*.
 
 type ToolActivity = { name: string; done: boolean };
 
@@ -28,26 +30,67 @@ type ServerMessage = {
 };
 
 const TOOL_LABELS: Record<string, string> = {
-  search_business_data: "Searching the business data",
+  search_business_data: "Searching your business data",
   read_document: "Reading a document",
-  list_documents: "Reviewing what data is available",
-  get_business_profile: "Checking the business profile",
-  run_calculation: "Running a calculation",
-  aggregate_table: "Crunching spreadsheet numbers",
+  list_documents: "Reviewing available data",
+  get_business_profile: "Checking your business profile",
+  run_calculation: "Running the numbers",
+  aggregate_table: "Crunching spreadsheet figures",
   create_alert: "Filing a finding",
-  remember: "Saving a note for later",
+  remember: "Saving a note for next time",
   use_skill: "Consulting a playbook",
   update_watchlist: "Updating the watchlist",
   search_history: "Checking past conversations",
 };
 
-export default function Chat({ initialSessionId }: { initialSessionId: string | null }) {
+const SUGGESTIONS = [
+  "Which customer makes up most of my revenue?",
+  "What contracts or renewals are coming up?",
+  "Where might I be losing money?",
+  "What's the single most useful thing I could upload next?",
+];
+
+function ToolGroup({ tools, pending }: { tools: ToolActivity[]; pending?: boolean }) {
+  if (tools.length === 0) return null;
+  return (
+    <div className="mb-3 space-y-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+      {tools.map((t, i) => (
+        <div key={i} className="flex items-center gap-2 text-xs text-neutral-500">
+          {t.done ? (
+            <Check className="h-3.5 w-3.5 text-neutral-900" />
+          ) : (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />
+          )}
+          {TOOL_LABELS[t.name] ?? t.name}
+        </div>
+      ))}
+      {pending && tools.every((t) => t.done) && (
+        <div className="flex items-center gap-2 text-xs text-neutral-500">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />
+          Thinking
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Chat({
+  initialSessionId,
+  initialQuestion,
+}: {
+  initialSessionId: string | null;
+  initialQuestion?: string | null;
+}) {
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const esRef = useRef<EventSource | null>(null);
+  const router = useRouter();
 
   // Load transcript when a session exists.
   useEffect(() => {
@@ -65,18 +108,16 @@ export default function Chat({ initialSessionId }: { initialSessionId: string | 
             name: tc.function.name,
             done: true,
           }));
-          if (m.content || tools.length > 0) {
-            const last = display[display.length - 1];
-            if (last?.role === "assistant" && !m.content && tools.length > 0) {
-              last.tools = [...(last.tools ?? []), ...tools];
-            } else {
-              display.push({
-                id: m.id,
-                role: "assistant",
-                content: m.content,
-                tools: tools.length > 0 ? tools : undefined,
-              });
-            }
+          const last = display[display.length - 1];
+          if (last?.role === "assistant" && !m.content && tools.length > 0) {
+            last.tools = [...(last.tools ?? []), ...tools];
+          } else if (m.content || tools.length > 0) {
+            display.push({
+              id: m.id,
+              role: "assistant",
+              content: m.content,
+              tools: tools.length > 0 ? tools : undefined,
+            });
           }
         }
       }
@@ -84,197 +125,295 @@ export default function Chat({ initialSessionId }: { initialSessionId: string | 
     })();
   }, [sessionId]);
 
+  // Auto-scroll, but only when the user is already near the bottom.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const tailRun = useCallback((runId: string) => {
-    const es = new EventSource(`/api/proxy/api/runs/${runId}/events`);
-    const assistantId = `live-${runId}`;
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantId, role: "assistant", content: "", tools: [], pending: true },
-    ]);
+  // Auto-grow the composer.
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+  }, [input]);
 
-    const update = (fn: (m: DisplayMessage) => DisplayMessage) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? fn(m) : m))
-      );
-    };
+  useEffect(() => () => esRef.current?.close(), []);
 
-    es.addEventListener("assistant.delta", (e) => {
-      const { delta } = JSON.parse((e as MessageEvent).data) as { delta: string };
-      update((m) => ({ ...m, content: m.content + delta }));
-    });
-    es.addEventListener("tool.call", (e) => {
-      const { name } = JSON.parse((e as MessageEvent).data) as { name: string };
-      update((m) => ({ ...m, tools: [...(m.tools ?? []), { name, done: false }] }));
-    });
-    es.addEventListener("tool.result", (e) => {
-      const { name } = JSON.parse((e as MessageEvent).data) as { name: string };
-      update((m) => ({
-        ...m,
-        tools: (m.tools ?? []).map((t) =>
-          t.name === name && !t.done ? { ...t, done: true } : t
-        ),
-      }));
-    });
-    es.addEventListener("run.finished", (e) => {
-      const { content } = JSON.parse((e as MessageEvent).data) as { content: string };
-      update((m) => ({ ...m, content: content || m.content, pending: false }));
-      es.close();
-      setBusy(false);
-    });
-    es.addEventListener("run.failed", (e) => {
-      const { error } = JSON.parse((e as MessageEvent).data) as { error: string };
-      update((m) => ({
-        ...m,
-        content: m.content || `Something went wrong: ${error}`,
-        pending: false,
-      }));
-      es.close();
-      setBusy(false);
-    });
-    es.addEventListener("run.paused", () => {
-      update((m) => ({
-        ...m,
-        content:
-          m.content ||
-          "I had to pause — this conversation hit its budget. Upgrade your plan or try again later.",
-        pending: false,
-      }));
-      es.close();
-      setBusy(false);
-    });
-    es.addEventListener("done", async () => {
-      // Stream opened after the run already finished — fetch the final state.
-      es.close();
-      const res = await fetch(`/api/proxy/api/runs/${runId}`);
-      if (res.ok) {
-        const data = (await res.json()) as { messages: ServerMessage[] };
-        const final = [...data.messages].reverse().find((m) => m.role === "assistant" && m.content);
-        update((m) => ({ ...m, content: final?.content ?? m.content, pending: false }));
+  // Auto-send a question passed in via ?ask= (e.g. "Ask about this alert").
+  // Fires once, only for a fresh conversation.
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (initialQuestion && !initialSessionId && !autoSent.current) {
+      autoSent.current = true;
+      void send(initialQuestion);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion]);
+
+  const tailRun = useCallback(
+    (rid: string, isFirstMessage: boolean) => {
+      const es = new EventSource(`/api/proxy/api/runs/${rid}/events`);
+      esRef.current = es;
+      const assistantId = `live-${rid}`;
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantId, role: "assistant", content: "", tools: [], pending: true },
+      ]);
+
+      const update = (fn: (m: DisplayMessage) => DisplayMessage) =>
+        setMessages((prev) => prev.map((m) => (m.id === assistantId ? fn(m) : m)));
+
+      const finish = () => {
+        es.close();
+        esRef.current = null;
+        setBusy(false);
+        setRunId(null);
+        // First message titles the session — refresh the sidebar.
+        if (isFirstMessage) router.refresh();
+      };
+
+      es.addEventListener("assistant.delta", (e) => {
+        const { delta } = JSON.parse((e as MessageEvent).data) as { delta: string };
+        update((m) => ({ ...m, content: m.content + delta }));
+      });
+      es.addEventListener("tool.call", (e) => {
+        const { name } = JSON.parse((e as MessageEvent).data) as { name: string };
+        update((m) => ({ ...m, tools: [...(m.tools ?? []), { name, done: false }] }));
+      });
+      es.addEventListener("tool.result", (e) => {
+        const { name } = JSON.parse((e as MessageEvent).data) as { name: string };
+        update((m) => ({
+          ...m,
+          tools: (m.tools ?? []).map((t) =>
+            t.name === name && !t.done ? { ...t, done: true } : t
+          ),
+        }));
+      });
+      es.addEventListener("run.finished", (e) => {
+        const { content } = JSON.parse((e as MessageEvent).data) as { content: string };
+        update((m) => ({ ...m, content: content || m.content, pending: false }));
+        finish();
+      });
+      es.addEventListener("run.failed", (e) => {
+        const { error } = JSON.parse((e as MessageEvent).data) as { error: string };
+        update((m) => ({
+          ...m,
+          content: m.content || `Something went wrong: ${error}`,
+          pending: false,
+        }));
+        finish();
+      });
+      es.addEventListener("run.paused", () => {
+        update((m) => ({
+          ...m,
+          content:
+            m.content ||
+            "I had to pause — this conversation hit its usage budget. Try again later or upgrade your plan.",
+          pending: false,
+        }));
+        finish();
+      });
+      es.addEventListener("done", async () => {
+        es.close();
+        const res = await fetch(`/api/proxy/api/runs/${rid}`);
+        if (res.ok) {
+          const data = (await res.json()) as { messages: ServerMessage[] };
+          const final = [...data.messages]
+            .reverse()
+            .find((m) => m.role === "assistant" && m.content);
+          update((m) => ({ ...m, content: final?.content ?? m.content, pending: false }));
+        }
+        finish();
+      });
+      es.onerror = () => {
+        // EventSource auto-reconnects; the "done" path resolves a finished run.
+      };
+    },
+    [router]
+  );
+
+  const send = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || busy) return;
+      setError(null);
+      setBusy(true);
+      setInput("");
+
+      let sid = sessionId;
+      const isFirstMessage = !sid || messages.length === 0;
+      if (!sid) {
+        const res = await fetch("/api/proxy/api/sessions", { method: "POST" });
+        if (!res.ok) {
+          setError("Could not start a conversation.");
+          setBusy(false);
+          return;
+        }
+        sid = ((await res.json()) as { session_id: string }).session_id;
+        setSessionId(sid);
+        window.history.replaceState(null, "", `/chat?session=${sid}`);
       }
-      setBusy(false);
-    });
-    es.onerror = () => {
-      // EventSource auto-reconnects; if the run finished meanwhile the
-      // "done" path above resolves it.
-    };
-  }, []);
 
-  const send = useCallback(async () => {
-    const text = input.trim();
-    if (!text || busy) return;
-    setError(null);
-    setBusy(true);
-    setInput("");
+      setMessages((prev) => [
+        ...prev,
+        { id: `user-${Date.now()}`, role: "user", content: trimmed },
+      ]);
 
-    let sid = sessionId;
-    if (!sid) {
-      const res = await fetch("/api/proxy/api/sessions", { method: "POST" });
-      if (!res.ok) {
-        setError("Could not start a conversation.");
+      const res = await fetch(`/api/proxy/api/sessions/${sid}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: trimmed }),
+      });
+      if (res.status === 402) {
+        setError("You've reached your plan's usage limit this period.");
         setBusy(false);
         return;
       }
-      sid = ((await res.json()) as { session_id: string }).session_id;
-      setSessionId(sid);
-      window.history.replaceState(null, "", `/chat?session=${sid}`);
-    }
+      if (!res.ok) {
+        setError("Could not send the message.");
+        setBusy(false);
+        return;
+      }
+      const { run_id } = (await res.json()) as { run_id: string };
+      setRunId(run_id);
+      tailRun(run_id, isFirstMessage);
+    },
+    [busy, sessionId, messages.length, tailRun]
+  );
 
-    setMessages((prev) => [
-      ...prev,
-      { id: `user-${Date.now()}`, role: "user", content: text },
-    ]);
+  const stop = useCallback(async () => {
+    if (!runId) return;
+    await fetch(`/api/proxy/api/runs/${runId}/cancel`, { method: "POST" });
+    esRef.current?.close();
+    esRef.current = null;
+    setBusy(false);
+    setRunId(null);
+    setMessages((prev) =>
+      prev.map((m) => (m.pending ? { ...m, pending: false } : m))
+    );
+  }, [runId]);
 
-    const res = await fetch(`/api/proxy/api/sessions/${sid}/messages`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message: text }),
-    });
-    if (res.status === 402) {
-      setError("You've reached your plan's usage limit this period.");
-      setBusy(false);
-      return;
-    }
-    if (!res.ok) {
-      setError("Could not send the message.");
-      setBusy(false);
-      return;
-    }
-    const { run_id } = (await res.json()) as { run_id: string };
-    tailRun(run_id);
-  }, [input, busy, sessionId, tailRun]);
+  const empty = messages.length === 0;
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col">
-      <div className="flex-1 space-y-4 overflow-y-auto pb-4">
-        {messages.length === 0 && (
-          <div className="mt-16 text-center text-neutral-500">
-            <p className="text-lg font-medium">Ask your analyst anything.</p>
-            <p className="mt-1 text-sm">
-              &ldquo;Which customer makes up most of my revenue?&rdquo; ·
-              &ldquo;What contracts renew soon?&rdquo; · &ldquo;Where am I
-              losing money?&rdquo;
-            </p>
-          </div>
-        )}
-        {messages.map((m) => (
-          <div key={m.id} className={m.role === "user" ? "flex justify-end" : ""}>
-            <div
-              className={
-                m.role === "user"
-                  ? "max-w-[80%] rounded-2xl bg-neutral-900 px-4 py-2 text-white dark:bg-neutral-100 dark:text-neutral-900"
-                  : "max-w-[90%]"
-              }
-            >
-              {m.tools && m.tools.length > 0 && (
-                <div className="mb-2 space-y-1">
-                  {m.tools.map((t, i) => (
-                    <p key={i} className="text-xs text-neutral-500">
-                      {t.done ? "✓" : "…"} {TOOL_LABELS[t.name] ?? t.name}
-                    </p>
-                  ))}
-                </div>
-              )}
-              {m.role === "assistant" ? (
-                <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {m.content || (m.pending ? "_Thinking…_" : "")}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <p className="whitespace-pre-wrap">{m.content}</p>
+    <div className="flex h-full flex-col">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl px-4 py-8">
+          {empty ? (
+            <div className="mt-[12vh] text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-900 text-white">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                What can I help you understand about your business?
+              </h2>
+              <p className="mt-2 text-sm text-neutral-500">
+                I analyze your real data — ask me anything, or start with one of these.
+              </p>
+              <div className="mx-auto mt-6 grid max-w-xl gap-2 sm:grid-cols-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => void send(s)}
+                    className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left text-sm text-neutral-700 transition-colors hover:border-neutral-400 hover:bg-neutral-100"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {messages.map((m) =>
+                m.role === "user" ? (
+                  <div key={m.id} className="flex justify-end">
+                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-neutral-900 px-4 py-2.5 text-[15px] text-white">
+                      {m.content}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={m.id} className="flex animate-fade-in gap-3">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-neutral-900 text-xs font-bold text-white">
+                      M
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <ToolGroup tools={m.tools ?? []} pending={m.pending} />
+                      {m.content ? (
+                        <div className="prose prose-neutral max-w-none prose-pre:bg-neutral-100 prose-pre:text-neutral-800">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {m.content}
+                          </ReactMarkdown>
+                          {m.pending && (
+                            <span className="ml-0.5 inline-block h-4 w-1.5 animate-blink bg-neutral-400 align-middle" />
+                          )}
+                        </div>
+                      ) : (
+                        (m.tools ?? []).length === 0 && (
+                          <div className="flex items-center gap-2 text-sm text-neutral-400">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Thinking…
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )
               )}
             </div>
-          </div>
-        ))}
-        <div ref={bottomRef} />
+          )}
+        </div>
       </div>
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send();
-        }}
-        className="flex gap-2"
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={busy ? "The analyst is working…" : "Ask about your business…"}
-          disabled={busy}
-          className="flex-1 rounded-xl border border-neutral-300 bg-transparent px-4 py-3 dark:border-neutral-700"
-        />
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          className="rounded-xl bg-neutral-900 px-5 py-3 font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
-        >
-          Send
-        </button>
-      </form>
+
+      <div className="border-t border-neutral-200 bg-neutral-50/80 backdrop-blur">
+        <div className="mx-auto max-w-3xl px-4 py-4">
+          {error && (
+            <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+          <div className="flex items-end gap-2 rounded-2xl border border-neutral-300 bg-white p-2 shadow-sm focus-within:border-neutral-500 focus-within:ring-2 focus-within:ring-neutral-200">
+            <textarea
+              ref={taRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void send(input);
+                }
+              }}
+              rows={1}
+              placeholder="Ask about your business…"
+              className="max-h-[200px] flex-1 resize-none bg-transparent px-2 py-1.5 text-[15px] outline-none placeholder:text-neutral-400"
+            />
+            {busy ? (
+              <button
+                onClick={() => void stop()}
+                title="Stop"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-white transition-colors hover:bg-neutral-700"
+              >
+                <Square className="h-4 w-4" fill="currentColor" />
+              </button>
+            ) : (
+              <button
+                onClick={() => void send(input)}
+                disabled={!input.trim()}
+                title="Send"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
+          <p className="mt-2 text-center text-xs text-neutral-400">
+            Menta analyzes your uploaded data. Double-check anything important.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

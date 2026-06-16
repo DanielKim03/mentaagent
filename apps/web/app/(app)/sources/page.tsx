@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import UploadForm from "@/components/UploadForm";
 import { apiGet } from "@/lib/api";
 
@@ -11,20 +12,27 @@ type SourceRow = {
   summary: string | null;
 };
 
+const STATUS_TONE: Record<string, string> = {
+  processed: "bg-green-100 text-green-700",
+  failed: "bg-red-100 text-red-700",
+  pending: "bg-amber-100 text-amber-700",
+  processing: "bg-amber-100 text-amber-700",
+};
+
 export default async function SourcesPage() {
   const { sources } = await apiGet<{ sources: SourceRow[] }>("/api/sources");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 p-6 md:p-8">
       <div>
-        <h1 className="text-2xl font-bold">Your business data</h1>
-        <p className="text-sm text-neutral-500">
-          Everything you share here is what your analyst reasons over. The
-          more complete the picture, the sharper the advice.
+        <h1 className="text-2xl font-bold tracking-tight">Your business data</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          Everything you share here is what your analyst reasons over. The more
+          complete the picture, the sharper the advice.
         </p>
       </div>
       <UploadForm />
-      <div className="space-y-3">
+      <div className="space-y-2">
         {sources.length === 0 && (
           <p className="text-sm text-neutral-500">
             Nothing shared yet. Good starters: a customer/sales spreadsheet,
@@ -34,27 +42,22 @@ export default async function SourcesPage() {
         {sources.map((s) => (
           <div
             key={s.id}
-            className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+            className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4"
           >
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-medium">{s.filename}</p>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
-                  s.status === "processed"
-                    ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
-                    : s.status === "failed"
-                      ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                }`}
-              >
-                {s.status}
-              </span>
+            <FileText className="mt-0.5 h-5 w-5 shrink-0 text-neutral-400" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-3">
+                <p className="truncate font-medium">{s.filename}</p>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[s.status] ?? "bg-neutral-100 text-neutral-600"}`}
+                >
+                  {s.status}
+                </span>
+              </div>
+              {s.summary && (
+                <p className="mt-1 text-sm text-neutral-600">{s.summary}</p>
+              )}
             </div>
-            {s.summary && (
-              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                {s.summary}
-              </p>
-            )}
           </div>
         ))}
       </div>

@@ -4,6 +4,10 @@ import {
   createAgentRun,
   enqueueReflectForSession,
 } from "../agent/runner.js";
+import { backfillEntities } from "../graph/entities.js";
+import { createReport } from "../report/orchestrator.js";
+
+export { backfillEntities };
 
 // Maintenance sweeps, driven by a single repeatable tick (Mentapath's
 // digest-scheduler fan-out pattern). Each sweep is idempotent and gated on
@@ -150,4 +154,61 @@ export async function sweepEmbedBackfill(): Promise<number> {
     }
   }
   return embedded;
+}
+
+// Auto-generate reports on a cadence. Monthly takes precedence over weekly
+// (a monthly report also satisfies the week). The run is kind=report,
+// trigger=schedule; when it finishes ready it's emailed to members
+// (see runner afterRun). Stamped BEFORE enqueuing so a double tick can't
+// double-generate.
+export async function sweepScheduledReports(): Promise<number> {
+  const { rows } = await pool.query<{
+    id: string;
+    monthly_due: boolean;
+    weekly_due: boolean;
+  }>(
+    `SELECT w.id,
+            (w.last_monthly_report_at IS NULL OR w.last_monthly_report_at < NOW() - INTERVAL '30 days') AS monthly_due,
+            (w.last_weekly_report_at  IS NULL OR w.last_weekly_report_at  < NOW() - INTERVAL '7 days')  AS weekly_due
+       FROM workspaces w
+      WHERE EXISTS (SELECT 1 FROM documents d WHERE d.workspace_id = w.id)
+        AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.workspace_id = w.id AND r.status = 'generating')
+        AND ( (w.last_monthly_report_at IS NULL OR w.last_monthly_report_at < NOW() - INTERVAL '30 days')
+           OR (w.last_weekly_report_at  IS NULL OR w.last_weekly_report_at  < NOW() - INTERVAL '7 days') )
+      LIMIT 5`
+  );
+  let count = 0;
+  for (const w of rows) {
+    const period = w.monthly_due ? "monthly" : "weekly";
+    if (period === "monthly") {
+      await pool.query(
+        "UPDATE workspaces SET last_monthly_report_at = NOW(), last_weekly_report_at = NOW() WHERE id = $1",
+        [w.id]
+      );
+    } else {
+      await pool.query(
+        "UPDATE workspaces SET last_weekly_report_at = NOW() WHERE id = $1",
+        [w.id]
+      );
+    }
+    const { reportId } = await createReport({ workspaceId: w.id, period });
+    const { runId } = await createAgentRun({
+      workspaceId: w.id,
+      kind: "report",
+      trigger: "schedule",
+      reportId,
+    });
+    await pool.query("UPDATE reports SET run_id = $2 WHERE id = $1", [reportId, runId]);
+    count += 1;
+  }
+  return count;
+}
+
+// Purge alerts that have been dismissed for more than 24h. Until then they
+// stay visible in the Dismissed section and can be restored.
+export async function sweepDismissedAlerts(): Promise<number> {
+  const { rowCount } = await pool.query(
+    "DELETE FROM alerts WHERE status = 'dismissed' AND dismissed_at < NOW() - INTERVAL '24 hours'"
+  );
+  return rowCount ?? 0;
 }

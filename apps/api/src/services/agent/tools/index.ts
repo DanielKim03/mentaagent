@@ -6,6 +6,7 @@ import "./list-documents.js";
 import "./get-business-profile.js";
 import "./run-calculation.js";
 import "./aggregate-table.js";
+import "./find-connections.js";
 import "./create-alert.js";
 import "./write-report-section.js";
 import "./remember.js";

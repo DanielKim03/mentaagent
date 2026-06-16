@@ -15,18 +15,28 @@ import { dimensionsForProfile, type Dimension } from "./rubric.js";
 export async function createReport(args: {
   workspaceId: string;
   createdBy?: string | null;
+  period?: "manual" | "weekly" | "monthly";
 }): Promise<{ reportId: string; runId: string }> {
   const profile = await loadWorkspaceProfile(args.workspaceId);
   const dims = dimensionsForProfile(profile.business_profile ?? {});
 
+  const period = args.period ?? "manual";
+  const prefix =
+    period === "weekly"
+      ? "Weekly Business Health Report"
+      : period === "monthly"
+        ? "Monthly Business Health Report"
+        : "Business Health Report";
+
   const { rows } = await pool.query<{ id: string }>(
-    `INSERT INTO reports (workspace_id, title, rubric)
-     VALUES ($1, $2, $3)
+    `INSERT INTO reports (workspace_id, title, rubric, period)
+     VALUES ($1, $2, $3, $4)
      RETURNING id`,
     [
       args.workspaceId,
-      `Business Health Report — ${new Date().toISOString().slice(0, 10)}`,
+      `${prefix} — ${new Date().toISOString().slice(0, 10)}`,
       JSON.stringify({ dimensions: dims.map((d) => d.key) }),
+      period,
     ]
   );
   const reportId = rows[0].id;

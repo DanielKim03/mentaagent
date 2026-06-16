@@ -69,7 +69,16 @@ const PRICING_MICROS_PER_MILLION: Record<
     input: 1_000_000,
     output: 1_000_000,
   },
-  // One-line fallback if Hermes tool-calling quality blocks launch.
+  // DeepSeek's first-party API (api.deepseek.com). V4 model IDs as of May
+  // 2026; cache-MISS input prices (we can't know the cache-hit ratio
+  // pre-call, so we bill the higher rate — consistent with never
+  // under-charging). The deepseek-chat/deepseek-reasoner aliases (deprecated
+  // 2026-07-24) map to deepseek-v4-flash and share its token pricing.
+  "deepseek-v4-flash": { input: 140_000, output: 280_000 },
+  "deepseek-v4-pro": { input: 435_000, output: 870_000 },
+  "deepseek-chat": { input: 140_000, output: 280_000 },
+  "deepseek-reasoner": { input: 140_000, output: 280_000 },
+  // Same model hosted on DeepInfra (different namespacing).
   "deepseek-ai/DeepSeek-V4-Flash": { input: 140_000, output: 280_000 },
   // Embeddings ($0.01/M tokens on DeepInfra).
   "BAAI/bge-m3": { input: 10_000, output: 0 },
