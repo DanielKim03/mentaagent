@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { auth, signIn } from "@/auth";
 import { pool } from "@/lib/db";
+import { TURNSTILE_SITE_KEY, verifyTurnstile } from "@/lib/turnstile";
+import { Turnstile } from "@/components/Turnstile";
 
 export default async function SignupPage({
   searchParams,
@@ -18,9 +21,25 @@ export default async function SignupPage({
     const businessName = String(formData.get("business") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
+    const agreedToTerms = formData.get("agreedToTerms") === "on";
 
     if (!email || password.length < 8 || !businessName) {
       redirect("/signup?error=invalid");
+    }
+    if (!agreedToTerms) {
+      redirect("/signup?error=terms");
+    }
+
+    // Cloudflare Turnstile — reject bots before the existing-email probe,
+    // bcrypt, and DB writes. remoteip helps Cloudflare catch replay/abuse.
+    const remoteIp =
+      headers().get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    const captcha = await verifyTurnstile(
+      String(formData.get("cf-turnstile-response") ?? ""),
+      remoteIp
+    );
+    if (!captcha.ok) {
+      redirect("/signup?error=captcha");
     }
 
     const { rows: existing } = await pool.query(
@@ -61,6 +80,19 @@ export default async function SignupPage({
   const field =
     "rounded-lg border border-neutral-300 bg-white px-3 py-2.5 outline-none transition-colors focus:border-neutral-500 focus:ring-2 focus:ring-neutral-200";
 
+  const errMsg =
+    searchParams.error === "exists"
+      ? "An account with that email already exists."
+      : searchParams.error === "terms"
+        ? "Please agree to the Terms of Service and Privacy Policy."
+        : searchParams.error === "captcha"
+          ? "Captcha verification failed. Reload the page and try again."
+          : searchParams.error === "invalid"
+            ? "Fill in every field; password needs 8+ characters."
+            : searchParams.error
+              ? "Sign-up failed. Try again."
+              : null;
+
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-8">
       <div>
@@ -72,21 +104,34 @@ export default async function SignupPage({
           Two minutes to your own AI business analyst.
         </p>
       </div>
-      {searchParams.error === "exists" && (
-        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          An account with that email already exists.
-        </p>
-      )}
-      {searchParams.error === "invalid" && (
-        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          Fill in every field; password needs 8+ characters.
-        </p>
+      {errMsg && (
+        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{errMsg}</p>
       )}
       <form action={signup} className="flex flex-col gap-3">
         <input name="name" placeholder="Your name" className={field} />
         <input name="business" required placeholder="Business name" className={field} />
         <input name="email" type="email" required placeholder="you@business.com" className={field} />
         <input name="password" type="password" required minLength={8} placeholder="Password (8+ chars)" className={field} />
+        <label className="flex items-start gap-2 text-xs text-neutral-600">
+          <input
+            type="checkbox"
+            name="agreedToTerms"
+            required
+            className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-400"
+          />
+          <span>
+            I agree to the{" "}
+            <Link href="/terms" target="_blank" className="font-medium text-neutral-700 underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" target="_blank" className="font-medium text-neutral-700 underline">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+        <Turnstile siteKey={TURNSTILE_SITE_KEY} />
         <button
           type="submit"
           className="mt-1 rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white transition-colors hover:bg-neutral-700"
