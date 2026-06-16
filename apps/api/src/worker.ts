@@ -137,6 +137,15 @@ const seeded = await seedGlobalSkills();
 if (seeded > 0) console.log(`[skills] seeded ${seeded} global skills`);
 await ensureMaintenanceSchedule();
 console.log("[worker] started: ingest + agent + maintenance");
+// Diagnostic fingerprint (no secret leaked): confirms which LLM key + endpoint
+// the running build actually loaded. Remove once the LLM is confirmed working.
+{
+  const k = env.LLM_API_KEY ?? "";
+  console.log(
+    `[llm] base=${env.LLM_BASE_URL} model=${env.AGENT_MODEL} ` +
+      `key=${k ? `len:${k.length} ${k.slice(0, 4)}…${k.slice(-4)}` : "<unset → stub>"}`
+  );
+}
 
 // --- graceful shutdown (drain in-flight jobs under Railway's SIGKILL window) ----
 
