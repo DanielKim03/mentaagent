@@ -2,6 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    // Behind Railway's edge proxy on a custom domain, the forwarded
+    // x-forwarded-host (mentapath.com) doesn't match the container's own
+    // Host, so Next 14's Server Actions CSRF guard rejects the action POST
+    // and the form silently does nothing. Allow the real public origins.
+    serverActions: {
+      allowedOrigins: ["mentapath.com", "www.mentapath.com", "*.up.railway.app"],
+    },
+  },
   async headers() {
     return [
       {
