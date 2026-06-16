@@ -31,5 +31,5 @@ export const config = {
   // so the chat would only render once the whole run finished instead of
   // streaming live. Keeping the proxy out of middleware lets events flush
   // incrementally.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/proxy).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/proxy|sw.js).*)"],
 };

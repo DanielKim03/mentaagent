@@ -73,31 +73,54 @@ export class MemoryBudgetError extends Error {
   }
 }
 
+// Trigram similarity at/above which a new entry is treated as a duplicate of
+// an existing one in the same category (same wording or a minor reword).
+// Genuinely different facts that merely share an entity name score well below
+// this; deeper semantic paraphrase merging is handled by the nightly
+// consolidate run.
+const DEDUP_SIMILARITY = 0.55;
+
+export type AddMemoryResult =
+  | { duplicate: false; row: MemoryRow }
+  | { duplicate: true; existing: string };
+
 export async function addMemory(args: {
   workspaceId: string;
   category: MemoryCategory;
   content: string;
   dueAt?: string | null;
   sourceRunId?: string | null;
-}): Promise<MemoryRow> {
+}): Promise<AddMemoryResult> {
+  const content = args.content.trim();
+
+  // Dedup FIRST (before the budget check) so re-saving a known fact is a
+  // cheap no-op. Matches an exact (case-insensitive) entry OR one with high
+  // trigram similarity, within the same category.
+  const { rows: dup } = await pool.query<{ content: string }>(
+    `SELECT content
+       FROM workspace_memory
+      WHERE workspace_id = $1 AND category = $2
+        AND (LOWER(content) = LOWER($3) OR similarity(content, $3) >= $4)
+      ORDER BY similarity(content, $3) DESC
+      LIMIT 1`,
+    [args.workspaceId, args.category, content, DEDUP_SIMILARITY]
+  );
+  if (dup.length > 0) {
+    return { duplicate: true, existing: dup[0].content };
+  }
+
   const budget = CATEGORY_BUDGET_CHARS[args.category];
   const used = await categoryUsedChars(args.workspaceId, args.category);
-  if (used + args.content.length > budget) {
+  if (used + content.length > budget) {
     throw new MemoryBudgetError(args.category, used, budget);
   }
   const { rows } = await pool.query<MemoryRow>(
     `INSERT INTO workspace_memory (workspace_id, category, content, due_at, source_run_id)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id, category, content, due_at, created_at, updated_at`,
-    [
-      args.workspaceId,
-      args.category,
-      args.content.trim(),
-      args.dueAt ?? null,
-      args.sourceRunId ?? null,
-    ]
+    [args.workspaceId, args.category, content, args.dueAt ?? null, args.sourceRunId ?? null]
   );
-  return rows[0];
+  return { duplicate: false, row: rows[0] };
 }
 
 // Replace by substring match within a category (the Hermes memory-tool

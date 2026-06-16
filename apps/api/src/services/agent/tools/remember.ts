@@ -40,14 +40,20 @@ registerTool({
       switch (args.action) {
         case "add": {
           if (!args.content) return JSON.stringify({ error: "content is required for add" });
-          await addMemory({
+          const result = await addMemory({
             workspaceId: ctx.workspaceId,
             category: args.category,
             content: args.content,
             dueAt: args.due_date ? `${args.due_date}T12:00:00Z` : null,
             sourceRunId: ctx.runId,
           });
-          return JSON.stringify({ saved: true });
+          return JSON.stringify(
+            result.duplicate
+              ? {
+                  skipped: `already remembered something equivalent: "${result.existing}" — not stored again`,
+                }
+              : { saved: true }
+          );
         }
         case "replace": {
           if (!args.content || !args.old_text) {

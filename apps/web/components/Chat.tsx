@@ -93,11 +93,16 @@ export default function Chat({
   const jumpToBottom = useRef(false);
   const router = useRouter();
 
-  // Load transcript when a session exists.
+  // Load the transcript of the conversation this component was OPENED with.
+  // Keyed on initialSessionId (the prop), NOT the sessionId state: when a new
+  // chat creates its session mid-send we set sessionId, and reloading the
+  // (near-empty) transcript then would wipe the optimistic messages +
+  // streaming placeholder. A past chat is opened by remounting with a new
+  // initialSessionId, so this still fires exactly when it should.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!initialSessionId) return;
     (async () => {
-      const res = await fetch(`/api/proxy/api/sessions/${sessionId}`);
+      const res = await fetch(`/api/proxy/api/sessions/${initialSessionId}`);
       if (!res.ok) return;
       const data = (await res.json()) as { messages: ServerMessage[] };
       const display: DisplayMessage[] = [];
@@ -126,7 +131,7 @@ export default function Chat({
       jumpToBottom.current = true; // opening a past chat → start at the bottom
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [initialSessionId]);
 
   // When a past conversation is opened, jump straight to the bottom (most
   // recent messages). After that, auto-scroll only when already near the
