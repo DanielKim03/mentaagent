@@ -135,28 +135,26 @@ export async function ensurePaddleCustomer(args: {
   return customerId;
 }
 
-// Creates a Paddle Checkout transaction and returns the hosted checkout URL.
-// We omit checkout.url so Paddle uses the workspace's default payment link.
+// Creates a Paddle transaction and returns the path the browser should visit
+// to pay. Paddle Billing has no standalone hosted checkout page — checkout
+// runs through Paddle.js on an approved domain — so we create the transaction
+// server-side (keeping customer + custom_data server-controlled) and send the
+// browser to our own /checkout page, which opens the Paddle.js overlay for
+// this transaction id.
 export async function createCheckoutUrl(args: {
   customerId: string;
   priceId: string;
   workspaceId: string;
   tier: PlanTier;
 }): Promise<string> {
-  type Res = { data: { checkout: { url: string | null } } };
+  type Res = { data: { id: string } };
   const res = await paddleFetch<Res>("POST", "/transactions", {
     items: [{ price_id: args.priceId, quantity: 1 }],
     customer_id: args.customerId,
     collection_mode: "automatic",
     custom_data: { workspace_id: args.workspaceId, tier: args.tier },
   });
-  const url = res.data.checkout?.url;
-  if (!url) {
-    throw new Error(
-      "Paddle did not return a checkout URL. Confirm a default payment link is configured in Checkout settings."
-    );
-  }
-  return url;
+  return `/checkout?_ptxn=${encodeURIComponent(res.data.id)}`;
 }
 
 export async function createPortalUrl(args: {
