@@ -38,11 +38,14 @@ export default async function BillingPage({
   const usage = await getWorkspaceUsage(admin.workspaceId);
   const sp = searchParams ?? {};
 
-  const usedUsd = Number(usage.usedUsdMicros) / 1_000_000;
-  const capUsd =
-    usage.capUsdMicros != null ? Number(usage.capUsdMicros) / 1_000_000 : null;
+  const hasCap = usage.capUsdMicros != null;
   const usedPct =
-    capUsd && capUsd > 0 ? Math.min(100, (usedUsd / capUsd) * 100) : 0;
+    hasCap && usage.capUsdMicros! > 0n
+      ? Math.min(
+          100,
+          (Number(usage.usedUsdMicros) / Number(usage.capUsdMicros)) * 100
+        )
+      : 0;
   const barTone =
     usedPct >= 100
       ? "bg-red-500"
@@ -111,11 +114,10 @@ export default async function BillingPage({
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium">AI usage this period</span>
             <span className="text-neutral-600">
-              ${usedUsd.toFixed(2)}
-              {capUsd != null ? ` / $${capUsd.toFixed(2)}` : " · no cap"}
+              {hasCap ? `${Math.round(usedPct)}%` : "No limit"}
             </span>
           </div>
-          {capUsd != null && (
+          {hasCap && (
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-neutral-100">
               <div
                 className={`h-full rounded-full ${barTone}`}
@@ -124,7 +126,6 @@ export default async function BillingPage({
             </div>
           )}
           <p className="mt-2 text-xs text-neutral-500">
-            {usage.totalTokens.toLocaleString()} tokens ·{" "}
             {usage.periodStart
               ? `resets ${
                   billing?.currentPeriodEnd
