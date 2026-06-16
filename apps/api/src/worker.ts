@@ -145,6 +145,16 @@ console.log("[worker] started: ingest + agent + maintenance");
     `[llm] base=${env.LLM_BASE_URL} model=${env.AGENT_MODEL} ` +
       `key=${k ? `len:${k.length} ${k.slice(0, 4)}…${k.slice(-4)}` : "<unset → stub>"}`
   );
+  // Host only (no credentials): confirms DB/Redis are on the internal Railway
+  // network (…railway.internal) vs the slower public proxy (…proxy.rlwy.net).
+  const host = (u: string) => {
+    try {
+      return new URL(u).host;
+    } catch {
+      return "?";
+    }
+  };
+  console.log(`[infra] db=${host(env.DATABASE_URL)} redis=${host(env.REDIS_URL)}`);
 }
 
 // --- graceful shutdown (drain in-flight jobs under Railway's SIGKILL window) ----
