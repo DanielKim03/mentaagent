@@ -8,13 +8,22 @@ import { TURNSTILE_SITE_KEY, verifyTurnstile } from "@/lib/turnstile";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { Turnstile } from "@/components/Turnstile";
 
+const PLAN_LABELS: Record<string, string> = { pro: "Pro", max: "Max" };
+
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; plan?: string };
 }) {
   const session = await auth();
   if (session?.user?.id) redirect("/chat");
+
+  // Plan chosen on the landing page (?plan=pro|max). Paid plans land on the
+  // billing page after signup to complete checkout; anything else is "free".
+  const selectedPlan =
+    searchParams.plan === "pro" || searchParams.plan === "max"
+      ? searchParams.plan
+      : null;
 
   async function signup(formData: FormData) {
     "use server";
@@ -56,6 +65,9 @@ export default async function SignupPage({
     );
     if (existing.length > 0) redirect("/signup?error=exists");
 
+    const plan = formData.get("plan");
+    const paidPlan = plan === "pro" || plan === "max" ? plan : null;
+
     const hash = await bcrypt.hash(password, 10);
     const client = await pool.connect();
     try {
@@ -82,7 +94,13 @@ export default async function SignupPage({
       client.release();
     }
 
-    await signIn("credentials", { email, password, redirectTo: "/onboarding" });
+    // Chose a paid plan on the landing page → straight to billing to complete
+    // checkout; otherwise into onboarding. (Onboarding stays available via the
+    // Profile nav for paid users.)
+    const redirectTo = paidPlan
+      ? `/settings/billing?plan=${paidPlan}`
+      : "/onboarding";
+    await signIn("credentials", { email, password, redirectTo });
   }
 
   const field =
@@ -117,7 +135,14 @@ export default async function SignupPage({
       {errMsg && (
         <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{errMsg}</p>
       )}
+      {selectedPlan && (
+        <p className="rounded-lg border border-neutral-300 bg-neutral-50 p-3 text-sm text-neutral-700">
+          You picked the <strong>{PLAN_LABELS[selectedPlan]}</strong> plan —
+          create your account and you&apos;ll finish checkout next.
+        </p>
+      )}
       <form action={signup} className="flex flex-col gap-3">
+        {selectedPlan && <input type="hidden" name="plan" value={selectedPlan} />}
         <input name="name" placeholder="Your name" className={field} />
         <input name="business" required placeholder="Business name" className={field} />
         <input name="email" type="email" required placeholder="you@business.com" className={field} />

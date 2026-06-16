@@ -30,7 +30,8 @@ const PLANS = [
     price: "$0",
     tagline: "Kick the tires",
     features: ["Upload a few files", "Chat with your analyst", "1 seat"],
-    cta: "Start free",
+    cta: "Get started free",
+    href: "/signup",
     highlight: false,
   },
   {
@@ -43,7 +44,8 @@ const PLANS = [
       "Weekly monitoring + alerts",
       "Up to 5 seats",
     ],
-    cta: "Start free trial",
+    cta: "Choose Pro",
+    href: "/signup?plan=pro",
     highlight: true,
   },
   {
@@ -51,7 +53,8 @@ const PLANS = [
     price: "$40/mo",
     tagline: "Heavier use, more team",
     features: ["~4× the monthly allowance", "Everything in Pro", "Up to 25 seats"],
-    cta: "Start free trial",
+    cta: "Choose Max",
+    href: "/signup?plan=max",
     highlight: false,
   },
 ];
@@ -147,7 +150,7 @@ export default async function PublicLandingPage() {
                   ))}
                 </ul>
                 <Link
-                  href="/signup"
+                  href={p.href}
                   className={`mt-6 block rounded-md px-4 py-2 text-center text-sm font-medium transition-colors ${
                     p.highlight
                       ? "bg-neutral-900 text-white hover:bg-neutral-700"
