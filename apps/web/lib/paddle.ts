@@ -101,12 +101,33 @@ export async function ensurePaddleCustomer(args: {
   if (existing?.paddleCustomerId) return existing.paddleCustomerId;
 
   type Res = { data: { id: string } };
-  const res = await paddleFetch<Res>("POST", "/customers", {
-    email: args.adminEmail,
-    name: args.workspaceName,
-    custom_data: { workspace_id: args.workspaceId },
-  });
-  const customerId = res.data.id;
+  let customerId: string;
+  try {
+    const res = await paddleFetch<Res>("POST", "/customers", {
+      email: args.adminEmail,
+      name: args.workspaceName,
+      custom_data: { workspace_id: args.workspaceId },
+    });
+    customerId = res.data.id;
+  } catch (err) {
+    // Reusing a Paddle account that already has this email (e.g. carried over
+    // from a prior deployment) → Paddle replies 409 customer_already_exists.
+    // Recover by looking the customer up by email and adopting it for this
+    // workspace, instead of failing the checkout.
+    if (!(err instanceof Error && err.message.includes("customer_already_exists"))) {
+      throw err;
+    }
+    type List = { data: Array<{ id: string; email: string }> };
+    const found = await paddleFetch<List>(
+      "GET",
+      `/customers?email=${encodeURIComponent(args.adminEmail)}`
+    );
+    const adopted = found.data.find(
+      (c) => c.email.toLowerCase() === args.adminEmail.toLowerCase()
+    )?.id;
+    if (!adopted) throw err; // can't recover — surface the original 409
+    customerId = adopted;
+  }
   await pool.query("UPDATE workspaces SET paddle_customer_id = $1 WHERE id = $2", [
     customerId,
     args.workspaceId,
