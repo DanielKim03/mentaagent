@@ -5,6 +5,7 @@ import { auth, signOut } from "@/auth";
 import SidebarNav from "@/components/SidebarNav";
 import AppShell from "@/components/AppShell";
 import { apiGet } from "@/lib/api";
+import { isWorkspaceAdmin } from "@/lib/admin";
 
 export default async function AppLayout({
   children,
@@ -26,6 +27,8 @@ export default async function AppLayout({
     // Leave badges empty — the nav still renders.
   }
 
+  const admin = await isWorkspaceAdmin();
+
   async function logout() {
     "use server";
     await signOut({ redirectTo: "/" });
@@ -39,7 +42,7 @@ export default async function AppLayout({
         </span>
         <span className="text-base font-semibold tracking-tight">MentaAgent</span>
       </Link>
-      <SidebarNav initialBadges={initialBadges} />
+      <SidebarNav initialBadges={initialBadges} isAdmin={admin} />
       <div className="mt-auto border-t border-neutral-200 pt-3">
         <p className="truncate px-2 text-xs text-neutral-500">{session.user.email}</p>
         <form action={logout}>

@@ -74,13 +74,15 @@ const PRICING_MICROS_PER_MILLION: Record<
   // pre-call, so we bill the higher rate — consistent with never
   // under-charging). The deepseek-chat/deepseek-reasoner aliases (deprecated
   // 2026-07-24) map to deepseek-v4-flash and share its token pricing.
-  "deepseek-v4-flash": { input: 140_000, output: 280_000 },
-  "deepseek-v4-pro": { input: 435_000, output: 870_000 },
-  "deepseek-chat": { input: 140_000, output: 280_000 },
-  "deepseek-reasoner": { input: 140_000, output: 280_000 },
-  // Same models hosted on DeepInfra (different namespacing).
-  "deepseek-ai/DeepSeek-V4-Flash": { input: 140_000, output: 280_000 },
-  "deepseek-ai/DeepSeek-V4-Pro": { input: 435_000, output: 870_000 },
+  "deepseek-v4-flash": { input: 100_000, output: 200_000 },
+  "deepseek-v4-pro": { input: 1_300_000, output: 2_600_000 },
+  "deepseek-chat": { input: 100_000, output: 200_000 },
+  "deepseek-reasoner": { input: 100_000, output: 200_000 },
+  // Same models hosted on DeepInfra (different namespacing). Verified against
+  // DeepInfra's published rates Jun 2026: V4-Flash $0.10/$0.20 per M tokens,
+  // V4-Pro $1.30/$2.60 per M tokens.
+  "deepseek-ai/DeepSeek-V4-Flash": { input: 100_000, output: 200_000 },
+  "deepseek-ai/DeepSeek-V4-Pro": { input: 1_300_000, output: 2_600_000 },
   // Embeddings ($0.01/M tokens on DeepInfra).
   "BAAI/bge-m3": { input: 10_000, output: 0 },
 };

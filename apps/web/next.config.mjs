@@ -54,6 +54,11 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ["mentapath.com", "www.mentapath.com", "*.up.railway.app"],
     },
+    // Don't reuse a dynamic page's RSC payload from the client Router Cache on
+    // soft navigation — every page renders live tenant data (lib/api.ts is
+    // always no-store). Without this, returning to /chat could serve a stale
+    // render that missed an in-flight run, so a running chat wouldn't resume.
+    staleTimes: { dynamic: 0 },
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

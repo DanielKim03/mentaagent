@@ -183,30 +183,35 @@ describe("agent loop", () => {
   });
 
   it("respects the memory char budget with a consolidate error", async () => {
-    const big = "x".repeat(1400);
+    // Each entry must be DISTINCT: addMemory dedups (trigram similarity) BEFORE
+    // the budget check, so four identical adds would collapse to one and never
+    // overflow. Distinct single-char blocks score ~0 similarity, so all pass
+    // dedup. owner_preferences budget is 1500 chars: three 490-char entries fit
+    // (1470), the 4th (1960) must be rejected with "over budget".
+    const entry = (c: string) => c.repeat(490);
     setStubScript([
       {
         content: "",
         toolCalls: [
-          call("remember", { action: "add", category: "owner_preferences", content: big.slice(0, 490) }),
+          call("remember", { action: "add", category: "owner_preferences", content: entry("a") }),
         ],
       },
       {
         content: "",
         toolCalls: [
-          call("remember", { action: "add", category: "owner_preferences", content: big.slice(0, 490) }),
+          call("remember", { action: "add", category: "owner_preferences", content: entry("b") }),
         ],
       },
       {
         content: "",
         toolCalls: [
-          call("remember", { action: "add", category: "owner_preferences", content: big.slice(0, 490) }),
+          call("remember", { action: "add", category: "owner_preferences", content: entry("c") }),
         ],
       },
       {
         content: "",
         toolCalls: [
-          call("remember", { action: "add", category: "owner_preferences", content: big.slice(0, 490) }),
+          call("remember", { action: "add", category: "owner_preferences", content: entry("d") }),
         ],
       },
       { content: "done" },

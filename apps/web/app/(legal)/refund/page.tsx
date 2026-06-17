@@ -1,4 +1,4 @@
-export const metadata = { title: "Refund Policy — Mentapath" };
+export const metadata = { title: "Refund Policy — MentaAgent" };
 
 const EFFECTIVE_DATE = "2026-05-20";
 
@@ -10,8 +10,8 @@ export default function RefundPage() {
 
       <Section title="1. Plans and trials">
         <p>
-          Mentapath offers a Free plan (no card required, hard-capped at 2
-          source uploads and 2 AI queries per workspace) and two paid
+          MentaAgent offers a Free plan (no card required, hard-capped at 4
+          source uploads and 8 AI queries per workspace) and two paid
           plans: Pro at $10/month and Max at $40/month. Both paid plans
           begin with a <strong>14-day free trial</strong>. You can use
           every paid-tier feature during the trial.
@@ -37,7 +37,7 @@ export default function RefundPage() {
           access to your workspace through the end of the billing period
           you have already paid for; after that period your workspace
           automatically downgrades to the Free plan (your data is kept
-          intact, but you go back to the 2/2 quota).
+          intact, but you go back to the free-plan quota).
         </p>
       </Section>
 

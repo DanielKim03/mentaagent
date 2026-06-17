@@ -60,17 +60,19 @@ export type RunPolicy = {
   model: "agent" | "heavy";
 };
 
-// NOTE: caps are LOOSENED for the testing phase so runs aren't cut short
-// mid-task. The iteration counts and a runaway-loop wall clock remain as
-// backstops, but the per-run dollar caps are generous. Tighten these before
-// charging customers (see plan §"Budget discipline").
+// Per-run dollar caps are runaway BACKSTOPS, sized ~10x a heavy real run at
+// the live DeepInfra pricing (V4-Flash $0.10/$0.20 per M tokens; the report's
+// exec summary on the heavier model is pricier). A typical chat costs well
+// under $0.05 and a full 7-dimension report well under $1; these ceilings only
+// fire on a pathological loop. The per-workspace monthly cap (lib/plans.ts:
+// free $1, pro $7, max $30) is the real spend limit — these sit on top of it.
 export const RUN_POLICY: Record<RunKind, RunPolicy> = {
   chat: {
     // A guardrail, not a target: the prompt steers the agent to answer in
     // ~1-3 tool calls. 14 caps a pathological over-investigation loop without
     // truncating a genuinely complex multi-step question.
     maxIterations: 14,
-    costCapUsdMicros: 2_000_000, // $2.00 (testing)
+    costCapUsdMicros: 250_000, // $0.25 backstop (~10x a heavy chat at $0.10/$0.20/M)
     wallClockMs: 300_000,
     tools: [
       "search_business_data",
@@ -94,7 +96,7 @@ export const RUN_POLICY: Record<RunKind, RunPolicy> = {
     // Excel serial dates) can burn 15-20 iterations, so give the whole report
     // generous room to finish all sections. Cost is still capped below.
     maxIterations: 200,
-    costCapUsdMicros: 20_000_000, // $20.00 (testing)
+    costCapUsdMicros: 2_000_000, // $2.00 backstop (7 fresh-context dimensions + heavy exec summary)
     wallClockMs: 1_200_000,
     tools: [
       "search_business_data",
@@ -113,7 +115,7 @@ export const RUN_POLICY: Record<RunKind, RunPolicy> = {
   },
   monitor: {
     maxIterations: 40,
-    costCapUsdMicros: 5_000_000, // $5.00 (testing)
+    costCapUsdMicros: 500_000, // $0.50 backstop (weekly per-workspace sweep)
     wallClockMs: 600_000,
     tools: [
       "search_business_data",

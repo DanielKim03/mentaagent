@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { pool } from "../db/client.js";
 import { listSkills, reviewSkill } from "../services/skills/store.js";
+import { requireAdminRole } from "../lib/auth.js";
 
 // Skills UI: catalog + the "Your analyst is learning" approval queue.
 
@@ -25,6 +26,9 @@ export async function skillsRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>(
     "/api/skills/:id/review",
     async (req, reply) => {
+      // Approving/rejecting a learned skill changes workspace-wide agent
+      // behavior — admin-only config.
+      if (!requireAdminRole(req, reply)) return;
       const parsed = reviewSchema.safeParse(req.body);
       if (!parsed.success) {
         return reply.code(400).send({ error: "decision must be approve or reject" });

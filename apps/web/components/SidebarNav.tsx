@@ -13,12 +13,15 @@ import {
   BookOpen,
   Settings,
   CreditCard,
+  Users,
 } from "lucide-react";
 
 type Badges = Record<string, number>;
 
 // `badgeTone` items show a count pill when their badge > 0. Alerts are
 // problems to solve (red); proposed skills are pending review (neutral).
+// `adminOnly` items are workspace config — hidden from invited members, who
+// would only hit a redirect or a 403 from the API trust boundary anyway.
 const NAV = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/alerts", label: "Alerts", icon: Bell, badgeTone: "bg-red-500" },
@@ -27,14 +30,17 @@ const NAV = [
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/memory", label: "Memory", icon: Brain },
   { href: "/skills", label: "Skills", icon: BookOpen, badgeTone: "bg-neutral-900" },
-  { href: "/onboarding", label: "Profile", icon: Settings },
-  { href: "/settings/billing", label: "Billing", icon: CreditCard },
+  { href: "/onboarding", label: "Profile", icon: Settings, adminOnly: true },
+  { href: "/settings/team", label: "Team", icon: Users, adminOnly: true },
+  { href: "/settings/billing", label: "Billing", icon: CreditCard, adminOnly: true },
 ];
 
 export default function SidebarNav({
   initialBadges = {},
+  isAdmin = false,
 }: {
   initialBadges?: Badges;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [badges, setBadges] = useState<Badges>(initialBadges);
@@ -64,9 +70,11 @@ export default function SidebarNav({
     };
   }, [pathname]);
 
+  const items = NAV.filter((item) => isAdmin || !item.adminOnly);
+
   return (
     <nav className="flex flex-col gap-0.5">
-      {NAV.map((item) => {
+      {items.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;

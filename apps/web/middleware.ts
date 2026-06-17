@@ -13,11 +13,14 @@ export default auth((req) => {
     pathname.startsWith("/api/paddle") || // Paddle webhook authenticates by HMAC, not session
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/set-password" || // invited teammates set a password while logged out
     pathname === "/terms" ||
     pathname === "/privacy" ||
     pathname === "/refund" ||
     pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico"
+    pathname === "/favicon.ico" ||
+    pathname === "/icon.svg" || // public brand assets (Next metadata routes)
+    pathname.startsWith("/opengraph-image")
   ) {
     return;
   }

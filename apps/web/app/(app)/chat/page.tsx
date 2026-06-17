@@ -1,6 +1,11 @@
 import ChatWorkspace from "@/components/ChatWorkspace";
 import { apiGet } from "@/lib/api";
 
+// Re-resolve the active session on every visit so opening /chat from another
+// section always picks up (and resumes) a still-running conversation rather
+// than a cached render. Pairs with experimental.staleTimes.dynamic=0.
+export const dynamic = "force-dynamic";
+
 type SessionRow = { id: string; title: string | null; created_at: string };
 
 export default async function ChatPage({

@@ -13,7 +13,7 @@ export default function LegalLayout({
             href="/"
             className="text-sm font-semibold tracking-tight hover:text-neutral-600"
           >
-            Mentapath
+            MentaAgent
           </Link>
           <nav className="flex gap-4 text-xs text-neutral-600">
             <Link href="/terms" className="hover:underline">
