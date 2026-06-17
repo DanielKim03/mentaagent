@@ -214,7 +214,8 @@ export async function sweepScheduledReports(): Promise<number> {
             (w.last_monthly_report_at IS NULL OR w.last_monthly_report_at < NOW() - INTERVAL '30 days') AS monthly_due,
             (w.last_weekly_report_at  IS NULL OR w.last_weekly_report_at  < NOW() - INTERVAL '7 days')  AS weekly_due
        FROM workspaces w
-      WHERE EXISTS (SELECT 1 FROM documents d WHERE d.workspace_id = w.id)
+      WHERE w.plan IN ('pro', 'max')   -- full health reports are a paid feature
+        AND EXISTS (SELECT 1 FROM documents d WHERE d.workspace_id = w.id)
         AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.workspace_id = w.id AND r.status = 'generating')
         AND ( (w.last_monthly_report_at IS NULL OR w.last_monthly_report_at < NOW() - INTERVAL '30 days')
            OR (w.last_weekly_report_at  IS NULL OR w.last_weekly_report_at  < NOW() - INTERVAL '7 days') )

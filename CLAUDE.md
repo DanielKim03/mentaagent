@@ -113,17 +113,19 @@ Resume after failure re-runs only pending sections.
 
 ## Not built yet (per the plan)
 
-Resend alert/digest emails + due-date sweeps (report emails ARE built —
-`services/report/email.ts`, sent on scheduled-report completion), connectors
-(schema + `services/connectors/` seam exist; Google Drive Picker first), skill
-curator job, pre-compaction memory flush, report PDF export beyond print CSS,
-the 30-case Hermes tool-calling eval. In-app email opt-out UI (the
-`users.alert_emails` column exists, defaults TRUE, but isn't user-editable yet).
+Resend periodic digest emails (report emails + imminent due-date alert emails
+ARE built — `services/report/email.ts`, `services/notify/imminent.ts`, sent from
+the worker), connectors (schema + `services/connectors/` seam exist; Google
+Drive Picker first), skill curator job, pre-compaction memory flush, report PDF
+export beyond print CSS, the 30-case Hermes tool-calling eval. In-app email
+opt-out UI (the `users.alert_emails` column exists, defaults TRUE, but isn't
+user-editable yet).
 
 Paddle billing is wired (checkout in `lib/billing-actions.ts` → `lib/paddle.ts`,
 webhook at `app/api/paddle/webhook`, plan activation + per-period caps in
 `syncSubscriptionFromPaddle`); it just needs `PADDLE_*` env vars to go live.
-Reports are generated automatically (scheduled sweep) — there is no manual
-"generate" trigger. Free tier enforces 4 files + 8 questions (migration 008);
-`create_alert` dedups against open + dismissed alerts and caps the open backlog
-at 15 (critical overrides). New uploads trigger an on-ingest review run.
+Reports are generated automatically for PAID workspaces only (scheduled sweep,
+no manual trigger); the free tier is interactive-only. Free tier enforces 4
+files + 8 questions (migration 008); `create_alert` dedups against open +
+dismissed alerts and caps the open backlog at 15 (critical overrides). New
+uploads trigger an on-ingest review run; imminent alert deadlines are emailed.

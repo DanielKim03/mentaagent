@@ -30,6 +30,7 @@ import {
   sweepMonitorRuns,
   sweepScheduledReports,
 } from "./services/monitor/schedule.js";
+import { runImminentAlertSweep } from "./services/notify/imminent.js";
 import { seedGlobalSkills } from "./services/skills/store.js";
 
 // The worker process: ingest jobs, agent runs, and the maintenance tick.
@@ -109,7 +110,7 @@ const maintenanceQueue = new Queue(MAINTENANCE_QUEUE, {
 const maintenanceWorker = new Worker(
   MAINTENANCE_QUEUE,
   async () => {
-    const [reflected, monitored, consolidated, embedded, entities, reports] =
+    const [reflected, monitored, consolidated, embedded, entities, reports, notified] =
       await Promise.all([
         sweepIdleSessions(),
         sweepMonitorRuns(),
@@ -117,10 +118,11 @@ const maintenanceWorker = new Worker(
         sweepEmbedBackfill(),
         backfillEntities(),
         sweepScheduledReports(),
+        runImminentAlertSweep(),
       ]);
-    if (reflected || monitored || consolidated || embedded || entities || reports) {
+    if (reflected || monitored || consolidated || embedded || entities || reports || notified.emailed) {
       console.log(
-        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded} entities=${entities} reports=${reports}`
+        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded} entities=${entities} reports=${reports} alert-emails=${notified.emailed}`
       );
     }
   },
