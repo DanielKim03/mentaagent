@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { auth } from "@/auth";
+import { LandingDemo } from "@/components/LandingDemo";
 import { PricingTable } from "@/components/PricingTable";
 
 export const metadata = {
@@ -96,6 +97,20 @@ export default async function PublicLandingPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Live demo */}
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-2xl font-semibold">See it in action</h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              A sample workspace — click a question on the right.
+            </p>
+          </div>
+          <span className="text-xs text-neutral-500">Illustrative — no sign-up needed</span>
+        </div>
+        <LandingDemo />
       </section>
 
       {/* Pricing */}
