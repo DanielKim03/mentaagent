@@ -15,9 +15,11 @@ export default async function ChatPage({
 }) {
   const { sessions } = await apiGet<{ sessions: SessionRow[] }>("/api/sessions");
 
-  // Opening Chat from another section (plain /chat) drops you back into a
-  // still-running conversation so it "follows" you. Skip this when explicitly
-  // starting fresh (?new=1 from the New button) or auto-asking (?ask=).
+  // Opening Chat from another section (plain /chat) drops you back into the
+  // conversation you were last in — running OR done — so it "follows" you and
+  // stays put until you start a New chat. Skip this when explicitly starting
+  // fresh (?new=1 from the New button) or auto-asking from an alert (?ask=),
+  // both of which should open a brand-new chat.
   let activeId = searchParams.session ?? null;
   if (!activeId && !searchParams.ask && !searchParams.new) {
     const { session_id } = await apiGet<{ session_id: string | null }>(

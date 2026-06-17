@@ -16,9 +16,14 @@ export async function sessionRoutes(app: FastifyInstance) {
     return { sessions: rows };
   });
 
-  // The chat session with an in-flight run (queued/running), if any, so the
-  // UI can default back into a conversation that's still being worked on.
-  // Static path — declared before "/:id" so it isn't captured as an id.
+  // The most-recently-used chat session (running OR done), so opening /chat
+  // from anywhere drops the user back into the conversation they were last in
+  // and it stays put until they explicitly start a New chat. Ordered by the
+  // latest chat turn, so reopening and continuing an older conversation makes
+  // it current again. Entry points that should NOT resume — the New button
+  // (?new=1) and an alert's "Ask about this" (?ask=) — bypass this lookup in
+  // the chat page. Static path — declared before "/:id" so it isn't captured
+  // as an id.
   app.get("/api/sessions/active", async (req) => {
     const { rows } = await pool.query<{ session_id: string }>(
       `SELECT s.id AS session_id
@@ -26,8 +31,8 @@ export async function sessionRoutes(app: FastifyInstance) {
          JOIN agent_runs r ON r.session_id = s.id
         WHERE s.workspace_id = $1
           AND r.kind = 'chat'
-          AND r.status IN ('queued', 'running')
-        ORDER BY r.created_at DESC
+        GROUP BY s.id
+        ORDER BY MAX(r.created_at) DESC
         LIMIT 1`,
       [req.workspaceId]
     );
