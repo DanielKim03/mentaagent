@@ -56,7 +56,7 @@ export default async function BillingPage({
       ? "bg-red-500"
       : usedPct >= 80
         ? "bg-amber-500"
-        : "bg-white";
+        : "bg-neutral-600";
   const label = statusLabel(billing?.status ?? null);
   const entitled = isEntitled(billing?.status ?? null);
   const hasCustomer = !!billing?.paddleCustomerId;
@@ -98,11 +98,11 @@ export default async function BillingPage({
       )}
 
       {chosenPlan && (
-        <div className="rounded-xl border border-neutral-900 bg-white p-5 text-stone-950">
+        <div className="rounded-xl border border-neutral-500 bg-neutral-100 p-5">
           <h2 className="text-base font-semibold">
             Finish setting up your {PLANS[chosenPlan].label} plan
           </h2>
-          <p className="mt-1 text-sm text-neutral-300">
+          <p className="mt-1 text-sm text-neutral-500">
             Complete checkout to activate {PLANS[chosenPlan].label} (
             {PLANS[chosenPlan].priceLabel}).
           </p>
@@ -111,7 +111,7 @@ export default async function BillingPage({
             <button
               type="submit"
               disabled={!PLANS[chosenPlan].priceId}
-              className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-100 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-950 transition-colors hover:bg-stone-200 disabled:opacity-50"
             >
               Continue to payment →
             </button>

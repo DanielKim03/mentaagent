@@ -11,7 +11,7 @@ import { UploadCloud, FileText, Check, X, Loader2 } from "lucide-react";
 type Phase = "uploading" | "processing" | "done" | "failed";
 type Item = { key: string; name: string; phase: Phase; message?: string };
 
-const ACCEPT = ".csv,.xlsx,.xls,.pdf,.docx,.txt,.eml";
+const ACCEPT = ".csv,.xlsx,.xls,.pdf,.docx,.txt,.eml,.jpg,.jpeg,.png,.webp";
 const MAX_CONCURRENT = 3;
 
 export default function UploadForm() {
@@ -133,7 +133,7 @@ export default function UploadForm() {
           Drop files here, or click to choose
         </p>
         <p className="mt-1 text-sm text-neutral-500">
-          Upload several at once — spreadsheets (CSV/XLSX), PDFs, Word docs, text, emails
+          Upload several at once — spreadsheets (CSV/XLSX), PDFs, Word docs, text, emails, images
         </p>
       </div>
 

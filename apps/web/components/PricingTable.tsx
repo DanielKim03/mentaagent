@@ -74,7 +74,7 @@ export function PricingTable() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{p.name}</h3>
               {selected && (
-                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-950">
+                <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-800">
                   Selected
                 </span>
               )}

@@ -347,7 +347,7 @@ export default function Chat({
         <div className="mx-auto max-w-3xl px-4 py-8">
           {empty ? (
             <div className="mt-[12vh] text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-stone-950">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-600">
                 <Sparkles className="h-6 w-6" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">
@@ -373,7 +373,7 @@ export default function Chat({
               {messages.map((m) =>
                 m.role === "user" ? (
                   <div key={m.id} className="flex justify-end">
-                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-white px-4 py-2.5 text-[15px] text-stone-950">
+                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-black px-4 py-2.5 text-[15px] text-white">
                       {m.content}
                     </div>
                   </div>

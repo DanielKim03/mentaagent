@@ -154,7 +154,7 @@ export function LandingDemo() {
                 aria-pressed={i === activeIdx}
                 className={`w-full rounded-lg border px-3 py-2 text-left text-xs leading-snug transition-colors ${
                   i === activeIdx
-                    ? "border-neutral-900 bg-white text-stone-950 shadow-sm"
+                    ? "border-neutral-500 bg-neutral-200 text-neutral-900 shadow-sm"
                     : "border-neutral-200 bg-neutral-100 text-neutral-700 hover:border-neutral-400"
                 }`}
               >
@@ -165,7 +165,7 @@ export function LandingDemo() {
 
           {/* User bubble — replays the active question */}
           <div className="mt-5 flex justify-end">
-            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-white px-3 py-2 text-xs text-stone-950">
+            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-black px-3 py-2 text-xs text-white">
               {sample.question}
             </div>
           </div>

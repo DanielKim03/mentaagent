@@ -16,6 +16,7 @@ import { pool } from "../../db/client.js";
 
 let chatCached: OpenAI | null | undefined = undefined;
 let embedCached: OpenAI | null | undefined = undefined;
+let visionCached: OpenAI | null | undefined = undefined;
 
 // Returns null when LLM_API_KEY is unset; the agent loop uses the stub
 // provider in that case so the rest of the pipeline can still be exercised
@@ -56,6 +57,30 @@ export function getEmbeddingsClient(): OpenAI | null {
   return embedCached;
 }
 
+// Vision client for image ingest (a VLM that transcribes/describes uploaded
+// photos). Credentials/URL fall back to the embeddings provider when the
+// dedicated VISION_* vars are unset — Qwen3-VL lives on the same DeepInfra
+// account as bge-m3, so one key covers both. Returns null when NEITHER a
+// vision nor an embeddings key is set; callers (the image parser, the upload
+// gate) treat null as "image ingest disabled".
+export function getVisionClient(): OpenAI | null {
+  if (visionCached !== undefined) return visionCached;
+  const apiKey = env.VISION_API_KEY ?? env.EMBEDDINGS_API_KEY;
+  if (!apiKey) {
+    visionCached = null;
+    return null;
+  }
+  visionCached = new OpenAI({
+    apiKey,
+    baseURL: env.VISION_BASE_URL ?? env.EMBEDDINGS_BASE_URL,
+    // A high-resolution image can take a while to caption; give it room but
+    // keep the per-call ceiling in callVision the real bound.
+    timeout: 180_000,
+    maxRetries: 1,
+  });
+  return visionCached;
+}
+
 // Pricing in micros (millionths of USD) per million tokens. Reverify at
 // deploy time — these drift. Sources: Nebius Token Factory + DeepInfra
 // pricing pages as of Jun 2026.
@@ -83,6 +108,12 @@ const PRICING_MICROS_PER_MILLION: Record<
   // V4-Pro $1.30/$2.60 per M tokens.
   "deepseek-ai/DeepSeek-V4-Flash": { input: 100_000, output: 200_000 },
   "deepseek-ai/DeepSeek-V4-Pro": { input: 1_300_000, output: 2_600_000 },
+  // Qwen3-VL vision-language models on DeepInfra (image ingest). Verified
+  // against DeepInfra's published rates Jun 2026: 30B-A3B $0.15/$0.60 per M
+  // tokens, 235B-A22B $0.20/$0.88 per M. Image pixels are billed as input
+  // tokens by the host; we reconcile to its reported usage post-call.
+  "Qwen/Qwen3-VL-30B-A3B-Instruct": { input: 150_000, output: 600_000 },
+  "Qwen/Qwen3-VL-235B-A22B-Instruct": { input: 200_000, output: 880_000 },
   // Embeddings ($0.01/M tokens on DeepInfra).
   "BAAI/bge-m3": { input: 10_000, output: 0 },
 };
@@ -295,7 +326,8 @@ export type LLMOperation =
   | "summarize"
   | "report"
   | "reflect"
-  | "embed";
+  | "embed"
+  | "vision";
 
 // Wraps client.chat.completions.create with an atomic pre-call budget
 // reservation and a post-call reconcile. Callers pass through the OpenAI
@@ -523,4 +555,85 @@ export async function callEmbeddings(args: {
     .slice()
     .sort((a, b) => a.index - b.index)
     .map((d) => d.embedding);
+}
+
+// Rough per-image input-token reservation. A VLM bills image pixels as tokens
+// (a few hundred to ~2K depending on resolution/tiling), NOT the base64 byte
+// count — so we MUST NOT route the data: URL through estimateTokens (it would
+// stringify ~1MB of base64 and reserve ~300K phantom tokens, spuriously
+// tripping the budget cap). Reconcile settles it to the host's real usage.
+const IMAGE_TOKEN_EST = 2000;
+
+// Vision twin of callLLM: turns one image (a data: URL) plus a text prompt
+// into text, with the same atomic budget reservation/reconcile against the
+// vision provider. Used by the image ingest parser. Throws if no vision
+// client is configured (callers gate uploads on getVisionClient() so this is
+// a backstop) or if the budget is exhausted.
+export async function callVision(args: {
+  workspaceId: string;
+  prompt: string;
+  dataUrl: string;
+  maxTokens?: number;
+  timeoutMs?: number;
+}): Promise<{ text: string; costUsdMicros: number }> {
+  const client = getVisionClient();
+  if (!client) {
+    throw new Error(
+      "Vision is not configured (no VISION_API_KEY or EMBEDDINGS_API_KEY) — callVision requires a real client."
+    );
+  }
+  const model = env.VISION_MODEL;
+  const maxTokens = args.maxTokens ?? 1500;
+
+  const reservationId = await reserveBudget({
+    workspaceId: args.workspaceId,
+    model,
+    operation: "vision",
+    estPromptTokens: Math.ceil(args.prompt.length / 4) + IMAGE_TOKEN_EST,
+    estCompletionTokens: maxTokens,
+  });
+
+  let completion: OpenAI.Chat.Completions.ChatCompletion;
+  try {
+    completion = await client.chat.completions.create(
+      {
+        model,
+        max_tokens: maxTokens,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: args.prompt },
+              { type: "image_url", image_url: { url: args.dataUrl } },
+            ],
+          },
+        ],
+      },
+      { timeout: args.timeoutMs ?? 120_000 }
+    );
+  } catch (err) {
+    await releaseReservation(reservationId);
+    throw err;
+  }
+
+  const usage = completion.usage;
+  let cost = computeCostMicros(
+    model,
+    Math.ceil(args.prompt.length / 4) + IMAGE_TOKEN_EST,
+    maxTokens
+  );
+  if (usage) {
+    cost = await reconcileUsage(
+      reservationId,
+      model,
+      usage.prompt_tokens,
+      usage.completion_tokens
+    ).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[llm] vision usage reconcile failed:", err);
+      return cost;
+    });
+  }
+
+  return { text: completion.choices[0]?.message?.content ?? "", costUsdMicros: cost };
 }

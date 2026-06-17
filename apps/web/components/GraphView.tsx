@@ -40,7 +40,7 @@ const ENTITY_COLORS: Record<string, string> = {
 };
 
 function nodeColor(n: GNode) {
-  return n.kind === "document" ? "#ffffff" : ENTITY_COLORS[n.type] ?? "#a99c8b";
+  return n.kind === "document" ? "#b3aa9c" : ENTITY_COLORS[n.type] ?? "#a99c8b";
 }
 function nodeRadius(n: GNode) {
   return n.kind === "document" ? 7 : 5 + Math.min(Math.sqrt(n.weight) * 2, 12);
@@ -239,7 +239,7 @@ export default function GraphView({
       {/* legend */}
       <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1 rounded-lg border border-neutral-200 bg-neutral-100/90 px-3 py-2 text-xs">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-white" /> Document
+          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-neutral-600" /> Document
         </span>
         {Object.entries(ENTITY_COLORS).map(([type, color]) => (
           <span key={type} className="flex items-center gap-1.5 capitalize">

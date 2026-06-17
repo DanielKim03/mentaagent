@@ -120,11 +120,11 @@ export const EXT_TO_CATEGORY: Record<string, string> = {
   ".json": "exports",
 };
 
-// Extensions the ingestion pipeline can actually PARSE today — must stay in
-// sync with services/ingestion/parse.ts. The upload route gates on this set
+// Extensions the ingestion pipeline can ALWAYS parse — must stay in sync with
+// services/ingestion/parse.ts. The upload route gates on supportedUploadExts()
 // (not the broader EXT_TO_CATEGORY roadmap) so a user can't burn a scarce
 // source-quota slot on a file the worker would only fail to process. Still
-// missing: .doc/.msg (legacy binary formats) and images (need OCR/vision).
+// missing: .doc/.msg (legacy binary formats).
 export const SUPPORTED_UPLOAD_EXTS = new Set([
   ".csv",
   ".xlsx",
@@ -134,6 +134,26 @@ export const SUPPORTED_UPLOAD_EXTS = new Set([
   ".txt",
   ".eml",
 ]);
+
+// Image formats are parseable ONLY when a vision model is configured (a VLM
+// transcribes them — see services/ingestion/parsers/image.ts). Gate them so a
+// no-vision instance rejects images at upload instead of accepting one, burning
+// a quota slot, and failing at ingest.
+const IMAGE_UPLOAD_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
+
+/** True when image ingest is available (a vision OR embeddings key is set). */
+export function isImageIngestEnabled(): boolean {
+  return Boolean(env.VISION_API_KEY || env.EMBEDDINGS_API_KEY);
+}
+
+/** Extensions accepted at upload right now, given the current configuration. */
+export function supportedUploadExts(): Set<string> {
+  const exts = new Set(SUPPORTED_UPLOAD_EXTS);
+  if (isImageIngestEnabled()) {
+    for (const ext of IMAGE_UPLOAD_EXTS) exts.add(ext);
+  }
+  return exts;
+}
 
 export function categorize(filename: string): { category: string; ext: string } {
   const ext = extname(filename).toLowerCase();

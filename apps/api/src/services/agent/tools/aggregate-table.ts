@@ -41,6 +41,14 @@ registerTool({
         error: "this document is not an uploaded spreadsheet — aggregate_table only works on uploaded CSV/XLSX files",
       });
     }
+    // Short-circuit non-spreadsheet types BEFORE parsing: re-parsing here is
+    // wasted work for documents, and for images it would fire a paid vision
+    // call just to then reject it as "not a spreadsheet".
+    if (!["csv", "xlsx", "xls"].includes(rows[0].file_type.toLowerCase())) {
+      return JSON.stringify({
+        error: `${rows[0].title} is not a spreadsheet — aggregate_table only works on uploaded CSV/XLSX files`,
+      });
+    }
     const parsed = await parseSource(
       ctx.workspaceId,
       rows[0].file_type,

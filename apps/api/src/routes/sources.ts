@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { pool } from "../db/client.js";
 import {
   saveSourceFile,
-  SUPPORTED_UPLOAD_EXTS,
+  supportedUploadExts,
 } from "../lib/storage.js";
 import { ingestQueue } from "../queue/queue.js";
 import { sourceEvents, type SourceStatusEvent } from "../queue/events.js";
@@ -28,9 +28,10 @@ export async function sourcesRoutes(app: FastifyInstance) {
     if (!file) return reply.code(400).send({ error: "no file provided" });
 
     const ext = extname(file.filename).toLowerCase();
-    if (!SUPPORTED_UPLOAD_EXTS.has(ext)) {
+    const allowed = supportedUploadExts();
+    if (!allowed.has(ext)) {
       return reply.code(400).send({
-        error: `unsupported file type ${ext || "(none)"} — supported: ${[...SUPPORTED_UPLOAD_EXTS].join(", ")}`,
+        error: `unsupported file type ${ext || "(none)"} — supported: ${[...allowed].join(", ")}`,
       });
     }
     const data = await file.toBuffer();

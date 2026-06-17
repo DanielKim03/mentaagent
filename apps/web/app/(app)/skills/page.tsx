@@ -32,10 +32,10 @@ export default async function SkillsPage() {
           {proposed.map((s) => (
             <div
               key={s.id}
-              className="rounded-xl border border-amber-300 bg-amber-50 p-4"
+              className="rounded-xl border border-neutral-300 bg-black p-4"
             >
-              <p className="font-medium">{s.name}</p>
-              <p className="mb-3 mt-1 text-sm text-neutral-600">{s.description}</p>
+              <p className="font-medium text-white">{s.name}</p>
+              <p className="mb-3 mt-1 text-sm text-neutral-500">{s.description}</p>
               <SkillReview skillId={s.id} />
             </div>
           ))}

@@ -40,6 +40,18 @@ const schema = z.object({
   EMBEDDINGS_API_KEY: z.string().trim().optional(),
   EMBEDDINGS_MODEL: z.string().trim().default("BAAI/bge-m3"),
 
+  // --- Vision (image ingest). An OpenAI-compatible vision-language host that
+  // turns uploaded photos/screenshots into faithful text for the text-RAG
+  // pipeline. BASE_URL/API_KEY fall back to the embeddings provider when unset
+  // (Qwen3-VL lives on the same DeepInfra account as bge-m3), so the default
+  // single-DeepInfra-key setup gets image support with no extra config. When
+  // NEITHER a vision nor an embeddings key is configured, image uploads are
+  // rejected at the door (see lib/storage.ts) — graceful degradation, no
+  // wasted source-quota slot.
+  VISION_BASE_URL: z.string().trim().url().optional(),
+  VISION_API_KEY: z.string().trim().optional(),
+  VISION_MODEL: z.string().trim().default("Qwen/Qwen3-VL-30B-A3B-Instruct"),
+
   // Instance-wide soft cap on total LLM spend per UTC day, in whole USD.
   // 0 disables. Fail-safe even if per-workspace gating misbehaves.
   LLM_DAILY_USD_CAP: z.coerce.number().nonnegative().default(0),

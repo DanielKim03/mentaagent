@@ -48,10 +48,12 @@ spend. Tests script it via `setStubScript()` in `services/agent/provider.ts`.
 Nous Hermes 4 70B/405B on Nebius (`LLM_BASE_URL`, native `tools`). Fallback
 mode `LLM_TOOL_MODE=hermes-xml` for hosts without native tool calling
 (schemas in system prompt, `<tool_call>` parsed from text). Embeddings:
-bge-m3 on DeepInfra (separate key). **Budget discipline (load-bearing,
-copied from Mentapath): every chat/embed call atomically pre-charges
-`llm_usage` under a per-workspace advisory lock, reconciles to real tokens
-after; per-workspace billing-period cap + instance daily cap → HTTP 402.**
+bge-m3 on DeepInfra (separate key). Vision (image ingest): Qwen3-VL on
+DeepInfra via `callVision` (`VISION_*` env; key/URL fall back to the
+embeddings provider). **Budget discipline (load-bearing, copied from
+Mentapath): every chat/embed/vision call atomically pre-charges `llm_usage`
+under a per-workspace advisory lock, reconciles to real tokens after;
+per-workspace billing-period cap + instance daily cap → HTTP 402.**
 
 ## Agent runtime (`apps/api/src/services/agent/`)
 
@@ -102,10 +104,12 @@ Resume after failure re-runs only pending sections.
 ## Conventions
 
 - Mentapath conventions carry over: graceful degradation when keys are
-  missing (no embed key → FTS-only retrieval; no Resend → no emails), quota
-  refund on final ingest failure, re-upload of same-named file replaces the
-  old source, byte-stable prompts, document content wrapped in `<document>`
-  markers and treated as untrusted data.
+  missing (no embed key → FTS-only retrieval; no Resend → no emails; no
+  vision/embeddings key → image uploads rejected at the door), quota refund on
+  final ingest failure, re-upload of same-named file replaces the old source,
+  byte-stable prompts, document content wrapped in `<document>` markers and
+  treated as untrusted data (image transcriptions included — the VLM is told to
+  ignore instructions inside the image).
 - Tests: DB-backed vitest in `apps/api/test/`, random-UUID workspaces,
   cascade cleanup in `afterAll`, stub provider — must never call paid LLMs.
 - Migrations: plain SQL in `apps/api/src/db/migrations/`, applied in
