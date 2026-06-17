@@ -80,14 +80,26 @@ export async function sourcesRoutes(app: FastifyInstance) {
     return reply.code(202).send({ source_id: sourceId, status: "pending" });
   });
 
+  // Delete a source (cascades to its document, chunks, embeddings). The
+  // upload quota is a ceiling on STORED sources, so deleting frees a slot —
+  // refund it, unless the ingest had already failed (the worker refunds those
+  // on final failure, so refunding again would over-credit).
   app.delete<{ Params: { id: string } }>(
     "/api/sources/:id",
     async (req, reply) => {
-      const { rowCount } = await pool.query(
-        "DELETE FROM sources WHERE id = $1 AND workspace_id = $2",
+      const { rows } = await pool.query<{ status: string }>(
+        "DELETE FROM sources WHERE id = $1 AND workspace_id = $2 RETURNING status",
         [req.params.id, req.workspaceId]
       );
-      if ((rowCount ?? 0) === 0) return reply.code(404).send({ error: "not found" });
+      if (rows.length === 0) return reply.code(404).send({ error: "not found" });
+      if (rows[0].status !== "failed") {
+        await pool.query(
+          `UPDATE workspaces
+              SET source_upload_quota = source_upload_quota + 1
+            WHERE id = $1 AND source_upload_quota IS NOT NULL`,
+          [req.workspaceId]
+        );
+      }
       return { deleted: true };
     }
   );

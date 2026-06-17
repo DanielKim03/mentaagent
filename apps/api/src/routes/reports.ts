@@ -1,7 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { pool } from "../db/client.js";
-import { createAgentRun } from "../services/agent/runner.js";
-import { createReport } from "../services/report/orchestrator.js";
 
 export async function reportsRoutes(app: FastifyInstance) {
   app.get("/api/reports", async (req) => {
@@ -29,29 +27,8 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { report: rows[0], sections };
   });
 
-  // Generate a new report: report row + sections + one report-kind run.
-  app.post("/api/reports", async (req, reply) => {
-    const { rows: active } = await pool.query(
-      `SELECT 1 FROM reports WHERE workspace_id = $1 AND status = 'generating' LIMIT 1`,
-      [req.workspaceId]
-    );
-    if (active.length > 0) {
-      return reply.code(409).send({ error: "a report is already generating" });
-    }
-
-    const { reportId } = await createReport({
-      workspaceId: req.workspaceId,
-      createdBy: req.userId,
-    });
-    const { runId } = await createAgentRun({
-      workspaceId: req.workspaceId,
-      kind: "report",
-      reportId,
-    });
-    await pool.query("UPDATE reports SET run_id = $2 WHERE id = $1", [
-      reportId,
-      runId,
-    ]);
-    return reply.code(202).send({ report_id: reportId, run_id: runId });
-  });
+  // Reports are generated automatically by the maintenance sweep
+  // (sweepScheduledReports: a first report shortly after the workspace has
+  // data, then weekly/monthly) and delivered by email — there is no manual
+  // "generate now" endpoint.
 }

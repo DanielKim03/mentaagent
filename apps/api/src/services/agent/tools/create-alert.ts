@@ -4,7 +4,9 @@ import { registerTool } from "../registry.js";
 
 // Validated writer with Mentapath's suggest-runner quality gates baked in:
 //  - severity floor (no "low" — too generic to be worth interrupting anyone)
-//  - pg_trgm dedup against ALL open alerts (re-finding a known issue is noise)
+//  - pg_trgm dedup against open AND dismissed alerts: re-finding a known issue
+//    is noise, and re-surfacing something the owner explicitly dismissed is
+//    worse. (Dismissed alerts are kept forever for exactly this reason.)
 //  - max 5 alerts per run (forces selectivity)
 // Living inside the tool means chat, report, and monitor runs all get the
 // gates for free.
@@ -45,17 +47,24 @@ registerTool({
       });
     }
 
-    // Gate: trigram dedup vs open (non-dismissed) alerts.
-    const { rows: dupRows } = await pool.query<{ title: string }>(
-      `SELECT title FROM alerts
-        WHERE workspace_id = $1 AND status = 'open'
+    // Gate: trigram dedup vs open AND dismissed alerts. Re-filing an open
+    // finding is noise; re-filing one the owner already dismissed is worse.
+    // (Resolved "wins" are allowed to recur — a fixed issue can come back.)
+    const { rows: dupRows } = await pool.query<{ title: string; status: string }>(
+      `SELECT title, status FROM alerts
+        WHERE workspace_id = $1 AND status IN ('open', 'dismissed')
           AND similarity(title, $2) > $3
+        ORDER BY (status = 'open') DESC
         LIMIT 1`,
       [ctx.workspaceId, args.title, SIMILARITY_THRESHOLD]
     );
     if (dupRows.length > 0) {
+      const seen = dupRows[0];
       return JSON.stringify({
-        skipped: `an open alert already covers this: "${dupRows[0].title}" — do not re-file it`,
+        skipped:
+          seen.status === "dismissed"
+            ? `the owner already dismissed a matching alert ("${seen.title}") — do not re-file it`
+            : `an open alert already covers this: "${seen.title}" — do not re-file it`,
       });
     }
 

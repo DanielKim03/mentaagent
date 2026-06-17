@@ -83,6 +83,49 @@ export async function sweepMonitorRuns(): Promise<number> {
   return rows.length;
 }
 
+// Triggered right after a file finishes ingesting: review the freshly added
+// data NOW (instead of waiting up to a week for the scheduled sweep) and file
+// crucial fixes the owner should act on. Reuses the monitor run kind (it has
+// create_alert + the read tools), so the same dedup/severity gates apply —
+// including suppression of anything the owner already dismissed.
+//
+// Collapses a burst of uploads into ONE review: if a monitor run is already
+// in flight for the workspace we skip, and the prompt covers everything added
+// in the last day, so a multi-file drop is reviewed together. Does NOT touch
+// last_monitor_at, so the weekly sweep's cadence is unaffected. Returns
+// whether a review was enqueued.
+export async function enqueueNewDataReview(workspaceId: string): Promise<boolean> {
+  const { rows: active } = await pool.query(
+    `SELECT 1 FROM agent_runs
+      WHERE workspace_id = $1 AND kind = 'monitor' AND status IN ('queued', 'running')
+      LIMIT 1`,
+    [workspaceId]
+  );
+  if (active.length > 0) return false;
+
+  const { rows: recent } = await pool.query<{ title: string }>(
+    `SELECT title FROM documents
+      WHERE workspace_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY created_at DESC LIMIT 25`,
+    [workspaceId]
+  );
+  if (recent.length === 0) return false;
+
+  const list = recent.map((d) => `- ${d.title}`).join("\n");
+  await createAgentRun({
+    workspaceId,
+    kind: "monitor",
+    trigger: "system",
+    userMessage:
+      `New business data was just added. Recently uploaded documents:\n${list}\n\n` +
+      `Investigate this new data for crucial risks, issues, or fixes the owner should act on now — ` +
+      `cross-check it against the existing data where useful. File only genuinely new, consequential ` +
+      `findings with create_alert. Do NOT re-file anything already covered by an existing alert ` +
+      `(including ones the owner has dismissed).`,
+  });
+  return true;
+}
+
 // Nightly memory consolidation (OpenClaw "dreaming", mandatory): one cheap
 // run per workspace whose memory changed since the last consolidation.
 export async function sweepConsolidation(): Promise<number> {
@@ -204,11 +247,7 @@ export async function sweepScheduledReports(): Promise<number> {
   return count;
 }
 
-// Purge alerts that have been dismissed for more than 24h. Until then they
-// stay visible in the Dismissed section and can be restored.
-export async function sweepDismissedAlerts(): Promise<number> {
-  const { rowCount } = await pool.query(
-    "DELETE FROM alerts WHERE status = 'dismissed' AND dismissed_at < NOW() - INTERVAL '24 hours'"
-  );
-  return rowCount ?? 0;
-}
+// NOTE: dismissed alerts are intentionally NOT purged. They're kept as
+// permanent tombstones so create_alert's dedup can suppress anything the owner
+// already dismissed — re-surfacing a rejected finding is noise. They stay in
+// the Dismissed section and remain restorable.

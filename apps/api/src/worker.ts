@@ -23,8 +23,8 @@ import { handleAgentJob } from "./services/agent/runner.js";
 import { processSource } from "./services/ingestion/pipeline.js";
 import {
   backfillEntities,
+  enqueueNewDataReview,
   sweepConsolidation,
-  sweepDismissedAlerts,
   sweepEmbedBackfill,
   sweepIdleSessions,
   sweepMonitorRuns,
@@ -58,6 +58,12 @@ const ingestWorker = new Worker<IngestJobData>(
         message: result.summary,
         details: result.details,
       });
+      // Proactively review the freshly added data for crucial fixes (files
+      // alerts, deduped against open + dismissed). Best-effort: a failure here
+      // must not fail the ingest.
+      await enqueueNewDataReview(workspaceId).catch((err) =>
+        console.error("[ingest] new-data review enqueue failed:", err)
+      );
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -103,7 +109,7 @@ const maintenanceQueue = new Queue(MAINTENANCE_QUEUE, {
 const maintenanceWorker = new Worker(
   MAINTENANCE_QUEUE,
   async () => {
-    const [reflected, monitored, consolidated, embedded, entities, reports, purged] =
+    const [reflected, monitored, consolidated, embedded, entities, reports] =
       await Promise.all([
         sweepIdleSessions(),
         sweepMonitorRuns(),
@@ -111,11 +117,10 @@ const maintenanceWorker = new Worker(
         sweepEmbedBackfill(),
         backfillEntities(),
         sweepScheduledReports(),
-        sweepDismissedAlerts(),
       ]);
-    if (reflected || monitored || consolidated || embedded || entities || reports || purged) {
+    if (reflected || monitored || consolidated || embedded || entities || reports) {
       console.log(
-        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded} entities=${entities} reports=${reports} purged=${purged}`
+        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded} entities=${entities} reports=${reports}`
       );
     }
   },

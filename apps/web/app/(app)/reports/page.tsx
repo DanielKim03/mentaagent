@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { FileBarChart, ChevronRight } from "lucide-react";
-import GenerateReportButton from "@/components/GenerateReportButton";
 import { apiGet } from "@/lib/api";
 
 type ReportRow = {
@@ -22,23 +21,22 @@ export default async function ReportsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 md:p-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Business health reports</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            A full investigation across finance, customers, contracts,
-            operations, and more — scored and cited from your data.
-          </p>
-        </div>
-        <GenerateReportButton />
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Business health reports</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          A full investigation across finance, customers, contracts,
+          operations, and more — scored and cited from your data. Reports are
+          generated automatically and emailed to you; they also show up here.
+        </p>
       </div>
       <div className="space-y-2">
         {reports.length === 0 && (
           <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
             <FileBarChart className="mx-auto mb-3 h-8 w-8 text-neutral-400" />
             <p className="text-sm text-neutral-500">
-              No reports yet. Upload some business data, then generate your
-              first report.
+              No reports yet. Upload some business data and your first report
+              is generated automatically — you&apos;ll get it by email and
+              it&apos;ll appear here.
             </p>
           </div>
         )}

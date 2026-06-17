@@ -1,5 +1,6 @@
 import { FileText } from "lucide-react";
 import UploadForm from "@/components/UploadForm";
+import DeleteSourceButton from "@/components/DeleteSourceButton";
 import { apiGet } from "@/lib/api";
 
 type SourceRow = {
@@ -48,11 +49,14 @@ export default async function SourcesPage() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">
                 <p className="truncate font-medium">{s.filename}</p>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[s.status] ?? "bg-neutral-100 text-neutral-600"}`}
-                >
-                  {s.status}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[s.status] ?? "bg-neutral-100 text-neutral-600"}`}
+                  >
+                    {s.status}
+                  </span>
+                  <DeleteSourceButton id={s.id} filename={s.filename} />
+                </div>
               </div>
               {s.summary && (
                 <p className="mt-1 text-sm text-neutral-600">{s.summary}</p>
