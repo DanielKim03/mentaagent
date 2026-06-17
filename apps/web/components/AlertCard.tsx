@@ -88,7 +88,7 @@ export default function AlertCard({ alert }: { alert: Alert }) {
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <Link
             href={askHref}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-1.5 font-medium text-white transition-colors hover:bg-brand-600"
+            className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 font-medium text-stone-950 transition-colors hover:bg-stone-200"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             Ask about this
@@ -143,7 +143,7 @@ export default function AlertCard({ alert }: { alert: Alert }) {
           />
           <button
             type="submit"
-            className="rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+            className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-stone-950 transition-colors hover:bg-stone-200"
           >
             Save
           </button>

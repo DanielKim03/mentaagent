@@ -56,7 +56,7 @@ export default async function BillingPage({
       ? "bg-red-500"
       : usedPct >= 80
         ? "bg-amber-500"
-        : "bg-brand-500";
+        : "bg-white";
   const label = statusLabel(billing?.status ?? null);
   const entitled = isEntitled(billing?.status ?? null);
   const hasCustomer = !!billing?.paddleCustomerId;
@@ -98,7 +98,7 @@ export default async function BillingPage({
       )}
 
       {chosenPlan && (
-        <div className="rounded-xl border border-neutral-900 bg-brand-500 p-5 text-white">
+        <div className="rounded-xl border border-neutral-900 bg-white p-5 text-stone-950">
           <h2 className="text-base font-semibold">
             Finish setting up your {PLANS[chosenPlan].label} plan
           </h2>
@@ -207,7 +207,7 @@ export default async function BillingPage({
               <button
                 type="submit"
                 disabled={!PLANS.max.priceId}
-                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
+                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-950 transition-colors hover:bg-stone-200 disabled:opacity-50"
               >
                 Upgrade to Max — {PLANS.max.priceLabel}
               </button>

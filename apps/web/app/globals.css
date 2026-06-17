@@ -6,29 +6,32 @@
   color-scheme: dark;
 }
 
-/* "Palantir × Claude" dark theme. Warm near-black canvas with two faint clay
-   glows, cream ink. bg-neutral-50 is the inverted dark surface; the body sits
+/* Warm-charcoal dark theme (Claude dark mode feel): a soft warm-dark canvas
+   — lighter than near-black for readability — with cream ink and a faint
+   neutral top glow. bg-neutral-50 is the inverted dark surface; the body sits
    one step darker than panels for depth. */
 body {
   @apply text-neutral-900 antialiased;
-  background-color: #070605;
-  background-image:
-    radial-gradient(1000px 540px at 8% -6%, rgba(217, 119, 87, 0.08), transparent 58%),
-    radial-gradient(1100px 640px at 96% 0%, rgba(217, 119, 87, 0.05), transparent 60%);
+  background-color: #1e1c19;
+  background-image: radial-gradient(
+    1100px 620px at 50% -8%,
+    rgba(255, 255, 255, 0.025),
+    transparent 60%
+  );
   background-attachment: fixed;
 }
 
 /* Soft, unobtrusive scrollbars (warm-dark). */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a322b transparent;
+  scrollbar-color: #4d4840 transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: #3a322b;
+  background-color: #4d4840;
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-track {
@@ -36,29 +39,29 @@ body {
 }
 
 ::selection {
-  background-color: rgba(217, 119, 87, 0.32);
+  background-color: rgba(255, 255, 255, 0.16);
 }
 
-/* Prose (assistant messages + reports) on dark: cream body, clay links,
-   cream headings/bold, warm-dark code surfaces. Overrides the typography
-   plugin's default light-theme colors. */
+/* Prose (assistant messages + reports) on dark: cream body + headings, cream
+   underlined links (no clay accent), warm-dark code surfaces. Overrides the
+   typography plugin's default light-theme colors. */
 .prose {
-  --tw-prose-body: #c3b8a8;
-  --tw-prose-headings: #ede7dc;
-  --tw-prose-lead: #a99c8b;
-  --tw-prose-links: #e69d7b;
-  --tw-prose-bold: #ede7dc;
-  --tw-prose-counters: #8a7d6e;
-  --tw-prose-bullets: #5b5048;
-  --tw-prose-hr: #29231e;
-  --tw-prose-quotes: #ddd4c7;
-  --tw-prose-quote-borders: #3a322b;
-  --tw-prose-captions: #8a7d6e;
-  --tw-prose-code: #ede7dc;
-  --tw-prose-pre-code: #ddd4c7;
-  --tw-prose-pre-bg: #1b1714;
-  --tw-prose-th-borders: #3a322b;
-  --tw-prose-td-borders: #29231e;
+  --tw-prose-body: #cbc0b3;
+  --tw-prose-headings: #f1ece4;
+  --tw-prose-lead: #b3aa9c;
+  --tw-prose-links: #f1ece4;
+  --tw-prose-bold: #f1ece4;
+  --tw-prose-counters: #978e81;
+  --tw-prose-bullets: #6f675b;
+  --tw-prose-hr: #3c3833;
+  --tw-prose-quotes: #e1dace;
+  --tw-prose-quote-borders: #4d4840;
+  --tw-prose-captions: #978e81;
+  --tw-prose-code: #f1ece4;
+  --tw-prose-pre-code: #e1dace;
+  --tw-prose-pre-bg: #2e2a26;
+  --tw-prose-th-borders: #4d4840;
+  --tw-prose-td-borders: #3c3833;
 }
 
 /* Tighten the prose used for assistant messages + reports. */

@@ -154,7 +154,7 @@ export default async function SetPasswordPage({
           </label>
           <button
             type="submit"
-            className="w-full rounded-md bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600"
+            className="w-full rounded-md bg-white px-3 py-2 text-sm font-medium text-stone-950 hover:bg-stone-200"
           >
             Save password
           </button>

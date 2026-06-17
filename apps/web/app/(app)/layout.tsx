@@ -37,9 +37,8 @@ export default async function AppLayout({
   const sidebar = (
     <>
       <Link href="/chat" className="mb-6 flex items-center gap-2 px-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
-          M
-        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-mark.jpg" alt="MentaAgent" className="h-7 w-7 rounded-lg object-cover" />
         <span className="text-base font-semibold tracking-tight">MentaAgent</span>
       </Link>
       <SidebarNav initialBadges={initialBadges} isAdmin={admin} />

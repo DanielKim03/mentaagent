@@ -18,9 +18,11 @@ export default auth((req) => {
     pathname === "/privacy" ||
     pathname === "/refund" ||
     pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico" ||
-    pathname === "/icon.svg" || // public brand assets (Next metadata routes)
-    pathname.startsWith("/opengraph-image")
+    pathname.startsWith("/opengraph-image") ||
+    // Public static assets (favicon, logo, og images) must bypass the auth
+    // gate — otherwise an <img src="/logo-mark.jpg"> on a logged-out page gets
+    // redirected to /login and renders as a broken image.
+    /\.(jpg|jpeg|png|svg|ico|webp|gif)$/.test(pathname)
   ) {
     return;
   }

@@ -145,7 +145,7 @@ export default async function OnboardingPage({
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-brand-500 px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-600"
+          className="rounded-lg bg-white px-4 py-2.5 font-medium text-stone-950 transition-colors hover:bg-stone-200"
         >
           Save profile
         </button>

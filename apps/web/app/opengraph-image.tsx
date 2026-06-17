@@ -1,9 +1,10 @@
 import { ImageResponse } from "next/og";
+import { LOGO_DATA_URL } from "./og-logo";
 
-// Branded social-share card (Open Graph + Twitter). Colors mirror the
-// marketing brief / tailwind tokens: neutral-900 ink, brand-500 terracotta,
-// brand-50 warm base. Rendered at request time by next/og — no binary asset
-// to keep in the repo, and it inherits the site's wordmark/lockup.
+// Branded social-share card (Open Graph + Twitter). Warm-charcoal canvas,
+// cream ink, the chain-link logo mark — mirrors the app's dark theme. The
+// logo is inlined as a base64 data URI (og-logo.ts) because Satori can't read
+// public files at render time.
 export const runtime = "nodejs";
 export const alt = "MentaAgent — Your AI business analyst";
 export const size = { width: 1200, height: 630 };
@@ -20,30 +21,22 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px",
-          backgroundColor: "#070605",
+          backgroundColor: "#1e1c19",
           backgroundImage:
-            "radial-gradient(circle at 78% 18%, rgba(217,119,87,0.18) 0%, transparent 60%)",
+            "radial-gradient(circle at 78% 18%, rgba(255,255,255,0.06) 0%, transparent 60%)",
         }}
       >
-        {/* Logo lockup: clay "M" square + cream wordmark */}
+        {/* Logo lockup: chain-link mark + cream wordmark */}
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <div
-            style={{
-              width: "72px",
-              height: "72px",
-              borderRadius: "16px",
-              backgroundColor: "#d97757",
-              color: "#ffffff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "48px",
-              fontWeight: 700,
-            }}
-          >
-            M
-          </div>
-          <div style={{ fontSize: "40px", fontWeight: 700, color: "#ede7dc" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={LOGO_DATA_URL}
+            width={72}
+            height={72}
+            style={{ borderRadius: "16px" }}
+            alt=""
+          />
+          <div style={{ fontSize: "40px", fontWeight: 700, color: "#f1ece4" }}>
             MentaAgent
           </div>
         </div>
@@ -55,7 +48,7 @@ export default function OpengraphImage() {
             fontSize: "64px",
             fontWeight: 700,
             lineHeight: 1.15,
-            color: "#ede7dc",
+            color: "#f1ece4",
             maxWidth: "900px",
           }}
         >
@@ -67,7 +60,7 @@ export default function OpengraphImage() {
             display: "flex",
             marginTop: "28px",
             fontSize: "30px",
-            color: "#a99c8b",
+            color: "#b3aa9c",
             maxWidth: "880px",
           }}
         >
@@ -81,7 +74,7 @@ export default function OpengraphImage() {
             marginTop: "44px",
             fontSize: "24px",
             fontWeight: 600,
-            color: "#e69d7b",
+            color: "#cbc0b3",
           }}
         >
           Grounded in your data, with citations · Free to start

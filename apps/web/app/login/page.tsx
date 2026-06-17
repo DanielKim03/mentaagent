@@ -73,7 +73,9 @@ export default async function LoginPage({
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-8">
       <div>
-        <Link href="/" className="text-lg font-semibold tracking-tight">
+        <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.jpg" alt="" className="h-7 w-7 rounded-lg object-cover" />
           MentaAgent
         </Link>
         <h1 className="mt-4 text-2xl font-bold">Welcome back</h1>
@@ -88,7 +90,7 @@ export default async function LoginPage({
         <Turnstile siteKey={TURNSTILE_SITE_KEY} />
         <button
           type="submit"
-          className="mt-1 rounded-lg bg-brand-500 px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-600"
+          className="mt-1 rounded-lg bg-white px-4 py-2.5 font-medium text-stone-950 transition-colors hover:bg-stone-200"
         >
           Sign in
         </button>

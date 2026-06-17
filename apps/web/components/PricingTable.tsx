@@ -74,7 +74,7 @@ export function PricingTable() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{p.name}</h3>
               {selected && (
-                <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-950">
                   Selected
                 </span>
               )}
@@ -94,7 +94,7 @@ export function PricingTable() {
               onClick={(e) => e.stopPropagation()}
               className={`mt-6 block rounded-md px-4 py-2 text-center text-sm font-medium transition-colors ${
                 selected
-                  ? "bg-brand-500 text-white hover:bg-brand-600"
+                  ? "bg-white text-stone-950 hover:bg-stone-200"
                   : "border border-neutral-300 bg-neutral-100 text-neutral-900 hover:bg-neutral-50"
               }`}
             >

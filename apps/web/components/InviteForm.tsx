@@ -39,7 +39,7 @@ export function InviteForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+        className="rounded-md bg-white px-3 py-2 text-sm font-medium text-stone-950 hover:bg-stone-200 disabled:opacity-50"
       >
         {pending ? "Adding…" : "Add teammate"}
       </button>

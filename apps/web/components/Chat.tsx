@@ -347,7 +347,7 @@ export default function Chat({
         <div className="mx-auto max-w-3xl px-4 py-8">
           {empty ? (
             <div className="mt-[12vh] text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500 text-white">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-stone-950">
                 <Sparkles className="h-6 w-6" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">
@@ -373,15 +373,18 @@ export default function Chat({
               {messages.map((m) =>
                 m.role === "user" ? (
                   <div key={m.id} className="flex justify-end">
-                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-brand-500 px-4 py-2.5 text-[15px] text-white">
+                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-white px-4 py-2.5 text-[15px] text-stone-950">
                       {m.content}
                     </div>
                   </div>
                 ) : (
                   <div key={m.id} className="flex animate-fade-in gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-xs font-bold text-white">
-                      M
-                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/logo-mark.jpg"
+                      alt="MentaAgent"
+                      className="mt-0.5 h-7 w-7 shrink-0 rounded-lg object-cover"
+                    />
                     <div className="min-w-0 flex-1">
                       <ToolGroup tools={m.tools ?? []} pending={m.pending} />
                       {m.content ? (
@@ -446,7 +449,7 @@ export default function Chat({
               <button
                 onClick={() => void stop()}
                 title="Stop"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-white transition-colors hover:bg-brand-600"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-stone-950 transition-colors hover:bg-stone-200"
               >
                 <Square className="h-4 w-4" fill="currentColor" />
               </button>
@@ -455,7 +458,7 @@ export default function Chat({
                 onClick={() => void send(input)}
                 disabled={!input.trim()}
                 title="Send"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-stone-950 transition-colors hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
               </button>

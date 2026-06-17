@@ -36,16 +36,15 @@ export default async function PublicLandingPage() {
       <header className="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-100/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <Link href="/" className="flex items-center gap-2 text-base font-semibold">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
-              M
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark.jpg" alt="MentaAgent" className="h-7 w-7 rounded-lg object-cover" />
             MentaAgent
           </Link>
           <nav className="flex items-center gap-2">
             <Link href="/login" className="rounded-md px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-100">
               Log in
             </Link>
-            <Link href="/signup" className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-600">
+            <Link href="/signup" className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-stone-950 transition-colors hover:bg-stone-200">
               Sign up
             </Link>
           </nav>
@@ -68,7 +67,7 @@ export default async function PublicLandingPage() {
             data, remembered across every conversation.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/signup" className="inline-flex items-center justify-center rounded-md bg-brand-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-600">
+            <Link href="/signup" className="inline-flex items-center justify-center rounded-md bg-white px-5 py-2.5 text-sm font-medium text-stone-950 transition-colors hover:bg-stone-200">
               Start free →
             </Link>
             <Link href="/login" className="inline-flex items-center justify-center rounded-md border border-neutral-300 bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-500">
@@ -133,7 +132,7 @@ export default async function PublicLandingPage() {
         </p>
         <Link
           href="/signup"
-          className="mt-6 inline-flex items-center justify-center rounded-md bg-brand-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+          className="mt-6 inline-flex items-center justify-center rounded-md bg-white px-5 py-2.5 text-sm font-medium text-stone-950 transition-colors hover:bg-stone-200"
         >
           Start free →
         </Link>
