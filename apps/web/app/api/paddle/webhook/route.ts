@@ -40,8 +40,17 @@ export async function POST(req: Request) {
 
   try {
     switch (event.event_type) {
+      // Every subscription.* lifecycle event carries the subscription object;
+      // route them all through the same idempotent sync, which derives access
+      // (and the plan's caps/quotas) from the event's status. Notably
+      // `subscription.activated` is what opens a plan that starts in a
+      // non-active state — handling only created/updated could miss it.
       case "subscription.created":
+      case "subscription.activated":
       case "subscription.updated":
+      case "subscription.resumed":
+      case "subscription.paused":
+      case "subscription.past_due":
       case "subscription.canceled": {
         const sub = event.data as unknown as PaddleSubscriptionEvent;
         const workspaceId = await syncSubscriptionFromPaddle(sub, event.occurred_at);

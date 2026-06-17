@@ -88,16 +88,32 @@ const PRICING_MICROS_PER_MILLION: Record<
 // Fallback for unknown models — assume costliest tier so we never under-bill.
 const FALLBACK_PRICING = { input: 1_000_000, output: 3_000_000 };
 
+// Models we've already warned about, so the log line below fires once per
+// unknown model rather than on every call.
+const warnedModels = new Set<string>();
+
 export function computeCostMicros(
   model: string,
   promptTokens: number,
   completionTokens: number
 ): number {
-  const p = PRICING_MICROS_PER_MILLION[model] ?? FALLBACK_PRICING;
+  const p = PRICING_MICROS_PER_MILLION[model];
+  if (!p && !warnedModels.has(model)) {
+    warnedModels.add(model);
+    // A configured model with no pricing entry bills at the costliest
+    // fallback — which silently over-consumes a paying workspace's cap. Make
+    // the misconfiguration visible so pricing can be added (see the table
+    // above). Not fatal: over-billing is the safe direction.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[llm] no pricing entry for model "${model}" — billing at the costliest fallback ($1/$3 per M). Add it to PRICING_MICROS_PER_MILLION.`
+    );
+  }
+  const pricing = p ?? FALLBACK_PRICING;
   // ceil so partial-micro costs round up (we'd rather over-account by <1
   // micro than systematically under-account).
   return Math.ceil(
-    (promptTokens * p.input + completionTokens * p.output) / 1_000_000
+    (promptTokens * pricing.input + completionTokens * pricing.output) / 1_000_000
   );
 }
 
