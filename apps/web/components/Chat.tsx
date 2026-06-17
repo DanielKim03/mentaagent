@@ -314,7 +314,10 @@ export default function Chat({
         body: JSON.stringify({ message: trimmed }),
       });
       if (res.status === 402) {
-        return fail("You've reached your plan's usage limit this period.");
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        return fail(
+          body?.error ?? "You've reached your plan's usage limit — upgrade to keep asking."
+        );
       }
       if (!res.ok) return fail("Could not send the message.");
       const { run_id } = (await res.json()) as { run_id: string };
