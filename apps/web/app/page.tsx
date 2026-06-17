@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Sparkles, Check } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { auth } from "@/auth";
+import { PricingTable } from "@/components/PricingTable";
 
 export const metadata = {
   title: "MentaAgent — your AI business analyst",
@@ -21,41 +22,6 @@ const FEATURES = [
   {
     title: "It remembers and improves",
     body: "Per-business memory and learned playbooks mean it gets sharper at advising you over time — and proactively flags new risks on a schedule.",
-  },
-];
-
-const PLANS = [
-  {
-    name: "Free",
-    price: "$0",
-    tagline: "Kick the tires",
-    features: ["Upload a few files", "Chat with your analyst", "1 seat"],
-    cta: "Get started free",
-    href: "/signup",
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "$10/mo",
-    tagline: "For an owner who wants answers",
-    features: [
-      "Generous upload limits",
-      "Full health reports",
-      "Weekly monitoring + alerts",
-      "Up to 5 seats",
-    ],
-    cta: "Choose Pro",
-    href: "/signup?plan=pro",
-    highlight: true,
-  },
-  {
-    name: "Max",
-    price: "$40/mo",
-    tagline: "Heavier use, more team",
-    features: ["~4× the monthly allowance", "Everything in Pro", "Up to 25 seats"],
-    cta: "Choose Max",
-    href: "/signup?plan=max",
-    highlight: false,
   },
 ];
 
@@ -108,12 +74,21 @@ export default async function PublicLandingPage() {
               Log in
             </Link>
           </div>
+          <p className="mt-3 text-xs text-neutral-500">
+            Free includes 4 files + 8 questions. Upgrade anytime.
+          </p>
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features — the first content block, right under the hero */}
       <section className="mx-auto max-w-6xl px-6 pb-20">
-        <div className="grid gap-4 md:grid-cols-3">
+        <h2 className="text-center text-2xl font-semibold">
+          Everything you need to understand your business
+        </h2>
+        <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-neutral-600">
+          Connect your files and let the analyst do the digging.
+        </p>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="rounded-2xl border border-neutral-200 bg-white p-6">
               <h3 className="font-semibold">{f.title}</h3>
@@ -128,40 +103,9 @@ export default async function PublicLandingPage() {
         <div className="mx-auto max-w-6xl px-6">
           <h2 className="text-center text-2xl font-semibold">Simple pricing</h2>
           <p className="mt-2 text-center text-sm text-neutral-600">
-            Start free. Upgrade when you want full reports, monitoring, and more seats.
+            Start free. Pick a plan — upgrade when you want full reports, monitoring, and more seats.
           </p>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {PLANS.map((p) => (
-              <div
-                key={p.name}
-                className={`rounded-2xl border p-6 ${p.highlight ? "border-neutral-900 shadow-sm" : "border-neutral-200"}`}
-              >
-                <div className="flex items-baseline justify-between">
-                  <h3 className="text-lg font-semibold">{p.name}</h3>
-                  <span className="text-lg font-semibold">{p.price}</span>
-                </div>
-                <p className="mt-1 text-sm text-neutral-500">{p.tagline}</p>
-                <ul className="mt-4 space-y-2 text-sm">
-                  {p.features.map((feat) => (
-                    <li key={feat} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-neutral-900" />
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={p.href}
-                  className={`mt-6 block rounded-md px-4 py-2 text-center text-sm font-medium transition-colors ${
-                    p.highlight
-                      ? "bg-neutral-900 text-white hover:bg-neutral-700"
-                      : "border border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-50"
-                  }`}
-                >
-                  {p.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
+          <PricingTable />
         </div>
       </section>
 

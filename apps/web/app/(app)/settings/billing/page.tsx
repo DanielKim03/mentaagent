@@ -175,6 +175,19 @@ export default async function BillingPage({
           </p>
         </div>
 
+        {(usage.questionsLeft != null || usage.uploadsLeft != null) && (
+          <div className="mt-4 border-t border-neutral-100 pt-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">Free plan allowance</span>
+            </div>
+            <p className="mt-1 text-xs text-neutral-500">
+              {usage.questionsLeft ?? 0} of {PLANS.free.questionQuota} questions and{" "}
+              {usage.uploadsLeft ?? 0} of {PLANS.free.sourceUploadQuota} file uploads left.
+              {" "}Upgrade for more.
+            </p>
+          </div>
+        )}
+
         <div className="mt-6 flex flex-wrap gap-3">
           {currentTier !== "pro" && currentTier !== "max" && (
             <form action={startCheckout}>

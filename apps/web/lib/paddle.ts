@@ -5,7 +5,8 @@ import { PLANS, tierForPriceId, type PlanTier } from "@/lib/plans";
 
 // Paddle REST API wrapper (no SDK dependency — the surface we need is small
 // and stable over fetch). Ported from Mentapath; adapted to MentaAgent's
-// schema (no query_quota column).
+// schema (question_quota is MentaAgent's equivalent of Mentapath's
+// query_quota).
 //
 // Refs: https://developer.paddle.com/api-reference/overview
 //       https://developer.paddle.com/webhooks/signature-verification
@@ -97,6 +98,8 @@ export type WorkspaceUsage = {
   capUsdMicros: bigint | null; // null = no cap (unlimited)
   totalTokens: number;
   periodStart: Date | null; // null = windowed on the UTC calendar month
+  questionsLeft: number | null; // remaining free questions; null = unlimited
+  uploadsLeft: number | null; // remaining free file uploads; null = unlimited
 };
 
 // LLM spend for the current billing period — the exact window the budget
@@ -110,12 +113,16 @@ export async function getWorkspaceUsage(
     tokens: string;
     cap: string | null;
     period_start: Date | null;
+    questions_left: number | null;
+    uploads_left: number | null;
   }>(
     `SELECT
         COALESCE(SUM(u.cost_usd_micros), 0)::text                       AS used,
         COALESCE(SUM(u.prompt_tokens + u.completion_tokens), 0)::text   AS tokens,
         (SELECT llm_cap_usd_micros::text FROM workspaces WHERE id = $1)  AS cap,
-        (SELECT current_period_start FROM workspaces WHERE id = $1)      AS period_start
+        (SELECT current_period_start FROM workspaces WHERE id = $1)      AS period_start,
+        (SELECT question_quota FROM workspaces WHERE id = $1)            AS questions_left,
+        (SELECT source_upload_quota FROM workspaces WHERE id = $1)       AS uploads_left
        FROM llm_usage u
       WHERE u.workspace_id = $1
         AND u.created_at >= COALESCE(
@@ -129,6 +136,8 @@ export async function getWorkspaceUsage(
     capUsdMicros: r?.cap != null ? BigInt(r.cap) : null,
     totalTokens: Number(r?.tokens ?? "0"),
     periodStart: r?.period_start ?? null,
+    questionsLeft: r?.questions_left ?? null,
+    uploadsLeft: r?.uploads_left ?? null,
   };
 }
 
@@ -308,9 +317,9 @@ export async function syncSubscriptionFromPaddle(
     !retainsAccess || !periodStartStr ? null : new Date(periodStartStr);
   const occurred = occurredAt ? new Date(occurredAt) : null;
 
-  // Reset the consumption counter (source_upload_quota) only when the plan
-  // actually changes; seat_limit + llm_cap are ceilings, always take the
-  // tier's value. Stale-event guard via last_billing_event_at.
+  // Reset the consumption counters (source_upload_quota, question_quota) only
+  // when the plan actually changes; seat_limit + llm_cap are ceilings, always
+  // take the tier's value. Stale-event guard via last_billing_event_at.
   const res = await pool.query(
     `UPDATE workspaces
         SET paddle_subscription_id = $1,
@@ -321,6 +330,8 @@ export async function syncSubscriptionFromPaddle(
             llm_cap_usd_micros     = $7,
             source_upload_quota    = CASE WHEN plan IS DISTINCT FROM $5
                                           THEN $8 ELSE source_upload_quota END,
+            question_quota         = CASE WHEN plan IS DISTINCT FROM $5
+                                          THEN $11 ELSE question_quota END,
             plan                   = $5,
             last_billing_event_at  = COALESCE($9::timestamptz, last_billing_event_at)
       WHERE id = $10
@@ -338,6 +349,7 @@ export async function syncSubscriptionFromPaddle(
       config.sourceUploadQuota,
       occurred,
       workspaceId,
+      config.questionQuota,
     ]
   );
   if (res.rowCount === 0) {

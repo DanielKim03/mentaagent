@@ -114,12 +114,42 @@ export async function sessionRoutes(app: FastifyInstance) {
         return reply.code(409).send({ error: "the analyst is still working on the previous message" });
       }
 
-      const { runId } = await createAgentRun({
-        workspaceId: req.workspaceId,
-        kind: "chat",
-        sessionId: req.params.id,
-        userMessage: parsed.data.message,
-      });
+      // Free-tier question allowance. NULL = unlimited (paid / grandfathered /
+      // dev); > 0 = decrement and proceed; 0 = blocked. Atomic so concurrent
+      // sends can't over-spend. Refunded if the run fails (see handleAgentJob)
+      // or never enqueues.
+      const { rows: quota } = await pool.query<{ ok: boolean }>(
+        `UPDATE workspaces
+            SET question_quota = CASE
+                  WHEN question_quota IS NULL THEN NULL
+                  ELSE question_quota - 1 END
+          WHERE id = $1 AND (question_quota IS NULL OR question_quota > 0)
+          RETURNING TRUE AS ok`,
+        [req.workspaceId]
+      );
+      if (quota.length === 0) {
+        return reply
+          .code(402)
+          .send({ error: "you've used all your free questions — upgrade to ask more" });
+      }
+
+      let runId: string;
+      try {
+        ({ runId } = await createAgentRun({
+          workspaceId: req.workspaceId,
+          kind: "chat",
+          sessionId: req.params.id,
+          userMessage: parsed.data.message,
+        }));
+      } catch (err) {
+        // Couldn't create/enqueue the run — give the question back.
+        await pool.query(
+          `UPDATE workspaces SET question_quota = question_quota + 1
+            WHERE id = $1 AND question_quota IS NOT NULL`,
+          [req.workspaceId]
+        );
+        throw err;
+      }
       return reply.code(202).send({ run_id: runId });
     }
   );

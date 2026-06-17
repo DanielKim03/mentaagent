@@ -160,6 +160,17 @@ export async function handleAgentJob(data: {
     [run.id, result.status, result.error ?? null]
   );
 
+  // A free-tier question is consumed at the API entry point (sessions route).
+  // If the run errored out — an infrastructure failure the owner didn't cause,
+  // not a budget pause or a user cancel — give the question back.
+  if (run.kind === "chat" && result.status === "failed") {
+    await pool.query(
+      `UPDATE workspaces SET question_quota = question_quota + 1
+        WHERE id = $1 AND question_quota IS NOT NULL`,
+      [run.workspace_id]
+    );
+  }
+
   switch (result.status) {
     case "done":
       emitAgentEvent({
