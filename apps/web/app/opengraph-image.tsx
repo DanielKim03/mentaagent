@@ -22,7 +22,7 @@ export default function OpengraphImage() {
           padding: "80px",
           backgroundColor: "#070605",
           backgroundImage:
-            "radial-gradient(900px 500px at 78% 18%, rgba(217,119,87,0.16) 0%, transparent 60%)",
+            "radial-gradient(circle at 78% 18%, rgba(217,119,87,0.18) 0%, transparent 60%)",
         }}
       >
         {/* Logo lockup: clay "M" square + cream wordmark */}
