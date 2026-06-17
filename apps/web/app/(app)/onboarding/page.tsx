@@ -45,7 +45,7 @@ export default async function OnboardingPage({
   }
 
   const field =
-    "rounded-lg border border-neutral-300 bg-white px-3 py-2.5 outline-none transition-colors focus:border-neutral-500 focus:ring-2 focus:ring-neutral-200";
+    "rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2.5 outline-none transition-colors focus:border-neutral-500 focus:ring-2 focus:ring-neutral-200";
 
   return (
     <div className="mx-auto max-w-xl space-y-6 p-6 md:p-8">
@@ -145,7 +145,7 @@ export default async function OnboardingPage({
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white transition-colors hover:bg-neutral-700"
+          className="rounded-lg bg-brand-500 px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-600"
         >
           Save profile
         </button>

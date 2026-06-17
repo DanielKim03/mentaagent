@@ -31,7 +31,7 @@ export default async function ReportsPage() {
       </div>
       <div className="space-y-2">
         {reports.length === 0 && (
-          <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+          <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-100 p-8 text-center">
             <FileBarChart className="mx-auto mb-3 h-8 w-8 text-neutral-400" />
             <p className="text-sm text-neutral-500">
               No reports yet. Upload some business data and your first report
@@ -44,7 +44,7 @@ export default async function ReportsPage() {
           <Link
             key={r.id}
             href={`/reports/${r.id}`}
-            className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-4 transition-colors hover:border-neutral-400 hover:bg-neutral-100"
+            className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-100 p-4 transition-colors hover:border-neutral-400 hover:bg-neutral-100"
           >
             <div className="min-w-0">
               <p className="truncate font-medium">{r.title}</p>

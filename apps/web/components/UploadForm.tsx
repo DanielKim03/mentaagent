@@ -114,7 +114,7 @@ export default function UploadForm() {
         className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
           dragging
             ? "border-neutral-500 bg-neutral-100"
-            : "border-neutral-300 bg-white hover:border-neutral-400 hover:bg-neutral-50"
+            : "border-neutral-300 bg-neutral-100 hover:border-neutral-400 hover:bg-neutral-50"
         }`}
       >
         <input
@@ -142,7 +142,7 @@ export default function UploadForm() {
           {items.map((it) => (
             <li
               key={it.key}
-              className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2.5"
+              className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2.5"
             >
               <FileText className="h-4 w-4 shrink-0 text-neutral-400" />
               <div className="min-w-0 flex-1">

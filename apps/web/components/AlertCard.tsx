@@ -53,7 +53,7 @@ export default function AlertCard({ alert }: { alert: Alert }) {
   const left = hoursLeft(alert.dismissed_at);
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+    <div className="rounded-xl border border-neutral-200 bg-neutral-100 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-medium">{alert.title}</p>
@@ -88,14 +88,14 @@ export default function AlertCard({ alert }: { alert: Alert }) {
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <Link
             href={askHref}
-            className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3 py-1.5 font-medium text-white transition-colors hover:bg-neutral-700"
+            className="flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-1.5 font-medium text-white transition-colors hover:bg-brand-600"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             Ask about this
           </Link>
           <button
             onClick={() => setShowOutcome((v) => !v)}
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+            className="rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-1.5 font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
           >
             I acted on this
           </button>
@@ -112,7 +112,7 @@ export default function AlertCard({ alert }: { alert: Alert }) {
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
           <button
             onClick={() => void patch({ status: "open" })}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+            className="flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-1.5 font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Restore
@@ -139,11 +139,11 @@ export default function AlertCard({ alert }: { alert: Alert }) {
             value={outcome}
             onChange={(e) => setOutcome(e.target.value)}
             placeholder="What happened? (e.g. renegotiated the contract, saved $400/mo)"
-            className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-neutral-500"
+            className="flex-1 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm outline-none focus:border-neutral-500"
           />
           <button
             type="submit"
-            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
+            className="rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-600"
           >
             Save
           </button>

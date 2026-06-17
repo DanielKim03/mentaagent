@@ -68,7 +68,7 @@ export default async function TeamPage() {
         <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-700">
           Members · {seatsUsed}
         </h2>
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">

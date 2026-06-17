@@ -43,7 +43,7 @@ export default async function SourcesPage() {
         {sources.map((s) => (
           <div
             key={s.id}
-            className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4"
+            className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-100 p-4"
           >
             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-neutral-400" />
             <div className="min-w-0 flex-1">

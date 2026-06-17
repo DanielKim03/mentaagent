@@ -63,7 +63,7 @@ export default function ChatWorkspace({
           {open && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute left-0 z-20 mt-1 max-h-[70vh] w-80 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
+              <div className="absolute left-0 z-20 mt-1 max-h-[70vh] w-80 overflow-y-auto rounded-xl border border-neutral-200 bg-neutral-100 p-1 shadow-lg">
                 {sessions.length === 0 && (
                   <p className="px-3 py-4 text-sm text-neutral-400">
                     No conversations yet.
@@ -132,7 +132,7 @@ export default function ChatWorkspace({
         </div>
         <Link
           href="/chat?new=1"
-          className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+          className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
         >
           <Plus className="h-4 w-4" />
           New

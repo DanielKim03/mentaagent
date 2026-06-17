@@ -104,7 +104,7 @@ export default async function SignupPage({
   }
 
   const field =
-    "rounded-lg border border-neutral-300 bg-white px-3 py-2.5 outline-none transition-colors focus:border-neutral-500 focus:ring-2 focus:ring-neutral-200";
+    "rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2.5 outline-none transition-colors focus:border-neutral-500 focus:ring-2 focus:ring-neutral-200";
 
   const errMsg =
     searchParams.error === "exists"
@@ -169,7 +169,7 @@ export default async function SignupPage({
         <Turnstile siteKey={TURNSTILE_SITE_KEY} />
         <button
           type="submit"
-          className="mt-1 rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white transition-colors hover:bg-neutral-700"
+          className="mt-1 rounded-lg bg-brand-500 px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-600"
         >
           Create account
         </button>

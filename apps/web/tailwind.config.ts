@@ -6,18 +6,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Warm terracotta accent (Claude-like) on warm stone neutrals.
+        // "Palantir × Claude" dark theme (from the launch storyboard).
+        // brand = the Claude clay accent: primary actions, links, identity.
         brand: {
-          50: "#fdf4f0",
-          100: "#fbe6dc",
-          200: "#f6c9b4",
-          300: "#efa384",
-          400: "#e57a52",
-          500: "#c96442", // primary
-          600: "#b14f31",
-          700: "#933e29",
-          800: "#773427",
-          900: "#622e24",
+          50: "#fbeee7",
+          100: "#f5d5c5",
+          200: "#edb095",
+          300: "#e69d7b", // clay-lite (#e8a07c)
+          400: "#df8a64",
+          500: "#d97757", // clay — primary
+          600: "#bd5d3e", // clay-deep — hover
+          700: "#9c4a31",
+          800: "#7c3b28",
+          900: "#5e2f22",
+        },
+        // The neutral ramp is INTENTIONALLY INVERTED into a warm-dark scale:
+        // the app was built light-first (low index = light surface, high index
+        // = dark ink), so flipping the hex values turns every existing
+        // bg-neutral-50/100, border-neutral-*, and text-neutral-* utility into
+        // its dark-theme equivalent without rewriting hundreds of classes.
+        // Low = darkest surface, high = cream ink.
+        neutral: {
+          50: "#14110f", // base surface
+          100: "#1b1714", // raised surface / hover
+          200: "#29231e", // subtle line / pill
+          300: "#3a322b", // border
+          400: "#5b5048", // faint text / disabled
+          500: "#8a7d6e", // secondary text
+          600: "#a99c8b", // stronger secondary
+          700: "#c3b8a8", // strong text
+          800: "#ddd4c7", // near-heading
+          900: "#ede7dc", // headings / primary ink (cream)
+          950: "#0c0a09", // deepest
         },
       },
       fontFamily: {

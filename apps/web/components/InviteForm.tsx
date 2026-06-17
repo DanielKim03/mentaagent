@@ -24,7 +24,7 @@ export function InviteForm({
           if (r.ok) formRef.current?.reset();
         });
       }}
-      className="flex flex-wrap items-end gap-3 rounded-xl border border-neutral-200 bg-white p-4"
+      className="flex flex-wrap items-end gap-3 rounded-xl border border-neutral-200 bg-neutral-100 p-4"
     >
       <label className="flex flex-col gap-1 text-xs">
         <span className="font-medium text-neutral-700">Email</span>
@@ -39,7 +39,7 @@ export function InviteForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+        className="rounded-md bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
       >
         {pending ? "Adding…" : "Add teammate"}
       </button>

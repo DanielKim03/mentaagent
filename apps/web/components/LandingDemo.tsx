@@ -97,7 +97,7 @@ export function LandingDemo() {
   const sample = SAMPLES[activeIdx];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 shadow-sm">
       <div className="grid gap-0 lg:grid-cols-5">
         {/* Left: gap-analysis report card — mirrors the real /reports view */}
         <div className="border-b border-neutral-200 p-6 lg:col-span-3 lg:border-b-0 lg:border-r">
@@ -154,8 +154,8 @@ export function LandingDemo() {
                 aria-pressed={i === activeIdx}
                 className={`w-full rounded-lg border px-3 py-2 text-left text-xs leading-snug transition-colors ${
                   i === activeIdx
-                    ? "border-neutral-900 bg-neutral-900 text-white shadow-sm"
-                    : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400"
+                    ? "border-neutral-900 bg-brand-500 text-white shadow-sm"
+                    : "border-neutral-200 bg-neutral-100 text-neutral-700 hover:border-neutral-400"
                 }`}
               >
                 {s.question}
@@ -165,13 +165,13 @@ export function LandingDemo() {
 
           {/* User bubble — replays the active question */}
           <div className="mt-5 flex justify-end">
-            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-neutral-900 px-3 py-2 text-xs text-white">
+            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-brand-500 px-3 py-2 text-xs text-white">
               {sample.question}
             </div>
           </div>
 
           {/* Assistant bubble */}
-          <div className="mt-3 rounded-2xl rounded-bl-sm border border-neutral-200 bg-white p-4 shadow-sm">
+          <div className="mt-3 rounded-2xl rounded-bl-sm border border-neutral-200 bg-neutral-100 p-4 shadow-sm">
             {sample.answer}
 
             <div className="mt-3 border-t border-neutral-100 pt-2">
@@ -200,7 +200,7 @@ export function LandingDemo() {
 function Cite({ children }: { children: ReactNode }) {
   // Inert in the demo — this is just the visual style of a real citation.
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-neutral-600">
+    <span className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 font-mono text-[10px] text-neutral-600">
       <FileText className="h-2.5 w-2.5" />
       {children}
     </span>

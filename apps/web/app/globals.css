@@ -3,24 +3,32 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
+/* "Palantir × Claude" dark theme. Warm near-black canvas with two faint clay
+   glows, cream ink. bg-neutral-50 is the inverted dark surface; the body sits
+   one step darker than panels for depth. */
 body {
-  @apply bg-neutral-50 text-neutral-900 antialiased;
+  @apply text-neutral-900 antialiased;
+  background-color: #070605;
+  background-image:
+    radial-gradient(1000px 540px at 8% -6%, rgba(217, 119, 87, 0.08), transparent 58%),
+    radial-gradient(1100px 640px at 96% 0%, rgba(217, 119, 87, 0.05), transparent 60%);
+  background-attachment: fixed;
 }
 
-/* Soft, unobtrusive scrollbars (Claude-like). */
+/* Soft, unobtrusive scrollbars (warm-dark). */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(212 212 212) transparent;
+  scrollbar-color: #3a322b transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: rgb(212 212 212);
+  background-color: #3a322b;
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-track {
@@ -28,7 +36,29 @@ body {
 }
 
 ::selection {
-  background-color: theme("colors.neutral.300");
+  background-color: rgba(217, 119, 87, 0.32);
+}
+
+/* Prose (assistant messages + reports) on dark: cream body, clay links,
+   cream headings/bold, warm-dark code surfaces. Overrides the typography
+   plugin's default light-theme colors. */
+.prose {
+  --tw-prose-body: #c3b8a8;
+  --tw-prose-headings: #ede7dc;
+  --tw-prose-lead: #a99c8b;
+  --tw-prose-links: #e69d7b;
+  --tw-prose-bold: #ede7dc;
+  --tw-prose-counters: #8a7d6e;
+  --tw-prose-bullets: #5b5048;
+  --tw-prose-hr: #29231e;
+  --tw-prose-quotes: #ddd4c7;
+  --tw-prose-quote-borders: #3a322b;
+  --tw-prose-captions: #8a7d6e;
+  --tw-prose-code: #ede7dc;
+  --tw-prose-pre-code: #ddd4c7;
+  --tw-prose-pre-bg: #1b1714;
+  --tw-prose-th-borders: #3a322b;
+  --tw-prose-td-borders: #29231e;
 }
 
 /* Tighten the prose used for assistant messages + reports. */

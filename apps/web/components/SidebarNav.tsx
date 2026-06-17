@@ -29,7 +29,7 @@ const NAV = [
   { href: "/graph", label: "Graph", icon: Share2 },
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/memory", label: "Memory", icon: Brain },
-  { href: "/skills", label: "Skills", icon: BookOpen, badgeTone: "bg-neutral-900" },
+  { href: "/skills", label: "Skills", icon: BookOpen, badgeTone: "bg-brand-500" },
   { href: "/onboarding", label: "Profile", icon: Settings, adminOnly: true },
   { href: "/settings/team", label: "Team", icon: Users, adminOnly: true },
   { href: "/settings/billing", label: "Billing", icon: CreditCard, adminOnly: true },
@@ -94,7 +94,7 @@ export default function SidebarNav({
             {count > 0 && (
               <span
                 aria-label={`${count} new`}
-                className={`inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold leading-5 text-white ${item.badgeTone ?? "bg-neutral-900"}`}
+                className={`inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold leading-5 text-white ${item.badgeTone ?? "bg-brand-500"}`}
               >
                 {count > 99 ? "99+" : count}
               </span>

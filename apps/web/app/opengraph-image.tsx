@@ -20,19 +20,19 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px",
-          backgroundColor: "#fdf4f0",
+          backgroundColor: "#070605",
           backgroundImage:
-            "radial-gradient(circle at 75% 25%, #fbe6dc 0%, #fdf4f0 55%)",
+            "radial-gradient(900px 500px at 78% 18%, rgba(217,119,87,0.16) 0%, transparent 60%)",
         }}
       >
-        {/* Logo lockup: neutral-900 "M" square + wordmark */}
+        {/* Logo lockup: clay "M" square + cream wordmark */}
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
           <div
             style={{
               width: "72px",
               height: "72px",
               borderRadius: "16px",
-              backgroundColor: "#171717",
+              backgroundColor: "#d97757",
               color: "#ffffff",
               display: "flex",
               alignItems: "center",
@@ -43,7 +43,7 @@ export default function OpengraphImage() {
           >
             M
           </div>
-          <div style={{ fontSize: "40px", fontWeight: 700, color: "#171717" }}>
+          <div style={{ fontSize: "40px", fontWeight: 700, color: "#ede7dc" }}>
             MentaAgent
           </div>
         </div>
@@ -55,7 +55,7 @@ export default function OpengraphImage() {
             fontSize: "64px",
             fontWeight: 700,
             lineHeight: 1.15,
-            color: "#171717",
+            color: "#ede7dc",
             maxWidth: "900px",
           }}
         >
@@ -67,7 +67,7 @@ export default function OpengraphImage() {
             display: "flex",
             marginTop: "28px",
             fontSize: "30px",
-            color: "#525252",
+            color: "#a99c8b",
             maxWidth: "880px",
           }}
         >
@@ -81,7 +81,7 @@ export default function OpengraphImage() {
             marginTop: "44px",
             fontSize: "24px",
             fontWeight: 600,
-            color: "#c96442",
+            color: "#e69d7b",
           }}
         >
           Grounded in your data, with citations · Free to start

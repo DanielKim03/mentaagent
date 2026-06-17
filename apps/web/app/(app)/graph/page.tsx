@@ -29,7 +29,7 @@ export default async function GraphPage() {
       </div>
       <div className="min-h-0 flex-1">
         {nodes.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-white text-center">
+          <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-neutral-100 text-center">
             <Share2 className="mb-3 h-8 w-8 text-neutral-400" />
             <p className="text-sm text-neutral-500">
               No connections yet. Upload business data on the{" "}

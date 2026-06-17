@@ -347,7 +347,7 @@ export default function Chat({
         <div className="mx-auto max-w-3xl px-4 py-8">
           {empty ? (
             <div className="mt-[12vh] text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-900 text-white">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500 text-white">
                 <Sparkles className="h-6 w-6" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">
@@ -361,7 +361,7 @@ export default function Chat({
                   <button
                     key={s}
                     onClick={() => void send(s)}
-                    className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left text-sm text-neutral-700 transition-colors hover:border-neutral-400 hover:bg-neutral-100"
+                    className="rounded-xl border border-neutral-200 bg-neutral-100 px-4 py-3 text-left text-sm text-neutral-700 transition-colors hover:border-neutral-400 hover:bg-neutral-100"
                   >
                     {s}
                   </button>
@@ -373,13 +373,13 @@ export default function Chat({
               {messages.map((m) =>
                 m.role === "user" ? (
                   <div key={m.id} className="flex justify-end">
-                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-neutral-900 px-4 py-2.5 text-[15px] text-white">
+                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-brand-500 px-4 py-2.5 text-[15px] text-white">
                       {m.content}
                     </div>
                   </div>
                 ) : (
                   <div key={m.id} className="flex animate-fade-in gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-neutral-900 text-xs font-bold text-white">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-xs font-bold text-white">
                       M
                     </div>
                     <div className="min-w-0 flex-1">
@@ -427,7 +427,7 @@ export default function Chat({
               Menta is analyzing your data…
             </div>
           )}
-          <div className="flex items-end gap-2 rounded-2xl border border-neutral-300 bg-white p-2 shadow-sm focus-within:border-neutral-500 focus-within:ring-2 focus-within:ring-neutral-200">
+          <div className="flex items-end gap-2 rounded-2xl border border-neutral-300 bg-neutral-100 p-2 shadow-sm focus-within:border-neutral-500 focus-within:ring-2 focus-within:ring-neutral-200">
             <textarea
               ref={taRef}
               value={input}
@@ -446,7 +446,7 @@ export default function Chat({
               <button
                 onClick={() => void stop()}
                 title="Stop"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-white transition-colors hover:bg-neutral-700"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-white transition-colors hover:bg-brand-600"
               >
                 <Square className="h-4 w-4" fill="currentColor" />
               </button>
@@ -455,7 +455,7 @@ export default function Chat({
                 onClick={() => void send(input)}
                 disabled={!input.trim()}
                 title="Send"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
               </button>

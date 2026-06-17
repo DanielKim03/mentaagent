@@ -37,7 +37,7 @@ export default async function AppLayout({
   const sidebar = (
     <>
       <Link href="/chat" className="mb-6 flex items-center gap-2 px-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 text-sm font-bold text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">
           M
         </span>
         <span className="text-base font-semibold tracking-tight">MentaAgent</span>

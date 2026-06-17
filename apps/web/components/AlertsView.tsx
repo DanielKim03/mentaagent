@@ -26,7 +26,7 @@ export default function AlertsView({ alerts }: { alerts: Alert[] }) {
   const tabBtn = (active: boolean) =>
     `rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
       active
-        ? "bg-white text-neutral-900 shadow-sm"
+        ? "bg-neutral-100 text-neutral-900 shadow-sm"
         : "text-neutral-500 hover:text-neutral-900"
     }`;
   const count = (n: number) =>
@@ -51,7 +51,7 @@ export default function AlertsView({ alerts }: { alerts: Alert[] }) {
         <div className="space-y-6">
           <div className="space-y-3">
             {open.length === 0 && (
-              <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
+              <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-100 p-8 text-center text-sm text-neutral-500">
                 No open findings. Your analyst reviews your data on a schedule
                 and will flag anything new here.
               </div>
@@ -77,7 +77,7 @@ export default function AlertsView({ alerts }: { alerts: Alert[] }) {
             it back to the Alerts tab.
           </p>
           {dismissed.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
+            <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-100 p-8 text-center text-sm text-neutral-500">
               Nothing dismissed.
             </div>
           ) : (

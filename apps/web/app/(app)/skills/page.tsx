@@ -46,7 +46,7 @@ export default async function SkillsPage() {
         {active.map((s) => (
           <div
             key={s.id}
-            className="rounded-xl border border-neutral-200 bg-white p-4"
+            className="rounded-xl border border-neutral-200 bg-neutral-100 p-4"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="font-medium">{s.name}</p>

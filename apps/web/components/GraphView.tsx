@@ -40,7 +40,7 @@ const ENTITY_COLORS: Record<string, string> = {
 };
 
 function nodeColor(n: GNode) {
-  return n.kind === "document" ? "#171717" : ENTITY_COLORS[n.type] ?? "#737373";
+  return n.kind === "document" ? "#d97757" : ENTITY_COLORS[n.type] ?? "#a99c8b";
 }
 function nodeRadius(n: GNode) {
   return n.kind === "document" ? 7 : 5 + Math.min(Math.sqrt(n.weight) * 2, 12);
@@ -169,7 +169,7 @@ export default function GraphView({
   return (
     <div
       ref={wrapRef}
-      className="relative h-full w-full overflow-hidden rounded-xl border border-neutral-200 bg-white"
+      className="relative h-full w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100"
     >
       <svg
         width={size.w}
@@ -193,7 +193,7 @@ export default function GraphView({
                 y1={s.y}
                 x2={t.x}
                 y2={t.y}
-                stroke="#d4d4d4"
+                stroke="#5b5048"
                 strokeWidth={1}
                 opacity={faded ? 0.1 : 0.6}
               />
@@ -237,9 +237,9 @@ export default function GraphView({
       </svg>
 
       {/* legend */}
-      <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1 rounded-lg border border-neutral-200 bg-white/90 px-3 py-2 text-xs">
+      <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1 rounded-lg border border-neutral-200 bg-neutral-100/90 px-3 py-2 text-xs">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-neutral-900" /> Document
+          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-brand-500" /> Document
         </span>
         {Object.entries(ENTITY_COLORS).map(([type, color]) => (
           <span key={type} className="flex items-center gap-1.5 capitalize">
