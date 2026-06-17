@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import SidebarNav from "@/components/SidebarNav";
 import AppShell from "@/components/AppShell";
+import { apiGet } from "@/lib/api";
 
 export default async function AppLayout({
   children,
@@ -12,6 +13,18 @@ export default async function AppLayout({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  // Seed the nav badges from the server so they're right on first paint;
+  // SidebarNav then polls for updates. Non-fatal if the count fetch fails.
+  let initialBadges: Record<string, number> = {};
+  try {
+    const b = await apiGet<{ openAlerts: number; pendingSkills: number }>(
+      "/api/nav-badges"
+    );
+    initialBadges = { "/alerts": b.openAlerts, "/skills": b.pendingSkills };
+  } catch {
+    // Leave badges empty — the nav still renders.
+  }
 
   async function logout() {
     "use server";
@@ -26,7 +39,7 @@ export default async function AppLayout({
         </span>
         <span className="text-base font-semibold tracking-tight">MentaAgent</span>
       </Link>
-      <SidebarNav />
+      <SidebarNav initialBadges={initialBadges} />
       <div className="mt-auto border-t border-neutral-200 pt-3">
         <p className="truncate px-2 text-xs text-neutral-500">{session.user.email}</p>
         <form action={logout}>

@@ -13,6 +13,7 @@ import { BudgetExceededError } from "./services/llm/client.js";
 import { alertsRoutes } from "./routes/alerts.js";
 import { graphRoutes } from "./routes/graph.js";
 import { memoryRoutes } from "./routes/memory.js";
+import { notificationsRoutes } from "./routes/notifications.js";
 import { reportsRoutes } from "./routes/reports.js";
 import { runRoutes } from "./routes/runs.js";
 import { sessionRoutes } from "./routes/sessions.js";
@@ -116,6 +117,7 @@ export async function buildApp() {
   await app.register(memoryRoutes);
   await app.register(skillsRoutes);
   await app.register(alertsRoutes);
+  await app.register(notificationsRoutes);
   await app.register(graphRoutes);
   await app.register(workspaceRoutes);
 
