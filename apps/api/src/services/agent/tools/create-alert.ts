@@ -8,11 +8,18 @@ import { registerTool } from "../registry.js";
 //    is noise, and re-surfacing something the owner explicitly dismissed is
 //    worse. (Dismissed alerts are kept forever for exactly this reason.)
 //  - max 5 alerts per run (forces selectivity)
+//  - global open-alert ceiling (below): the per-run cap + dedup still let
+//    distinct findings pile up across runs (chat, the weekly monitor, the
+//    on-upload review) until the alert center is noise — Mentapath's actual
+//    failure mode. Hold a focused backlog; only CRITICAL findings override it.
 // Living inside the tool means chat, report, and monitor runs all get the
 // gates for free.
 
 const MAX_ALERTS_PER_RUN = 5;
 const SIMILARITY_THRESHOLD = 0.55;
+// Ceiling on the active backlog the owner is asked to deal with. Once full,
+// new non-critical findings are held back until some are resolved/dismissed.
+export const MAX_OPEN_ALERTS = 15;
 
 const ALERT_TYPES = ["risk", "opportunity", "action"] as const;
 const SEVERITIES = ["critical", "high", "medium"] as const;
@@ -20,7 +27,7 @@ const SEVERITIES = ["critical", "high", "medium"] as const;
 registerTool({
   name: "create_alert",
   description:
-    "File a business finding (risk / opportunity / recommended action) for the owner's alert center. Only file findings with concrete evidence and real consequence (money, deadline, obligation) — generic best practices are rejected by policy. Max 5 per run; duplicates of open alerts are auto-rejected.",
+    "File a business finding (risk / opportunity / recommended action) for the owner's alert center. Only file findings with concrete evidence and real consequence (money, deadline, obligation) — generic best practices are rejected by policy. Max 5 per run; duplicates of open/dismissed alerts are auto-rejected; and once the owner already has a full backlog of open alerts, only critical findings are accepted. File sparingly — quality over quantity.",
   parameters: z.object({
     type: z.enum(ALERT_TYPES),
     severity: z
@@ -66,6 +73,21 @@ registerTool({
             ? `the owner already dismissed a matching alert ("${seen.title}") — do not re-file it`
             : `an open alert already covers this: "${seen.title}" — do not re-file it`,
       });
+    }
+
+    // Gate: global open-alert ceiling. Critical findings always surface (a
+    // "losing money now" item must not be suppressed by a backlog of mediums);
+    // everything else waits until the owner clears some of the backlog.
+    if (args.severity !== "critical") {
+      const { rows: openRows } = await pool.query<{ n: string }>(
+        "SELECT COUNT(*)::text AS n FROM alerts WHERE workspace_id = $1 AND status = 'open'",
+        [ctx.workspaceId]
+      );
+      if (Number(openRows[0].n) >= MAX_OPEN_ALERTS) {
+        return JSON.stringify({
+          skipped: `the owner already has ${openRows[0].n} open alerts — do not file more unless it is critical; they need to clear the backlog first`,
+        });
+      }
     }
 
     // Future-or-today due dates only (deadline math errors are common).
