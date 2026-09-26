@@ -3,10 +3,8 @@
 Managed AI business analyst SaaS: business owners connect their files and an
 agent tells them what the business is lacking and what to improve — with
 per-workspace memory and skills so it gets better at advising each business
-over time. Architecture and patterns adapted from Mentapath
-(`/home/daniel/Projects/Mentapath`, the founder's production SaaS).
-
-Full design doc: `~/.claude/plans/look-into-git-and-joyful-honey.md`.
+over time. Architecture and patterns adapted from Mentapath, the founder's
+earlier production SaaS.
 
 ## Services
 

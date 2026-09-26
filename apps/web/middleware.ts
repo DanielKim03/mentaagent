@@ -14,9 +14,6 @@ export default auth((req) => {
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/set-password" || // invited teammates set a password while logged out
-    pathname === "/terms" ||
-    pathname === "/privacy" ||
-    pathname === "/refund" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/opengraph-image") ||
     // Public static assets (favicon, logo, og images) must bypass the auth

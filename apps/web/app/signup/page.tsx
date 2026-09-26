@@ -38,13 +38,9 @@ export default async function SignupPage({
     const businessName = String(formData.get("business") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
-    const agreedToTerms = formData.get("agreedToTerms") === "on";
 
     if (!email || password.length < 8 || !businessName) {
       redirect("/signup?error=invalid");
-    }
-    if (!agreedToTerms) {
-      redirect("/signup?error=terms");
     }
 
     // Cloudflare Turnstile — reject bots before the existing-email probe,
@@ -109,9 +105,7 @@ export default async function SignupPage({
   const errMsg =
     searchParams.error === "exists"
       ? "An account with that email already exists."
-      : searchParams.error === "terms"
-        ? "Please agree to the Terms of Service and Privacy Policy."
-        : searchParams.error === "captcha"
+      : searchParams.error === "captcha"
           ? "Captcha verification failed. Reload the page and try again."
           : searchParams.error === "rate_limited"
             ? "Too many sign-up attempts from your network. Wait a minute and try again."
@@ -149,25 +143,6 @@ export default async function SignupPage({
         <input name="business" required placeholder="Business name" className={field} />
         <input name="email" type="email" required placeholder="you@business.com" className={field} />
         <input name="password" type="password" required minLength={8} placeholder="Password (8+ chars)" className={field} />
-        <label className="flex items-start gap-2 text-xs text-neutral-600">
-          <input
-            type="checkbox"
-            name="agreedToTerms"
-            required
-            className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-400"
-          />
-          <span>
-            I agree to the{" "}
-            <Link href="/terms" target="_blank" className="font-medium text-neutral-700 underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" target="_blank" className="font-medium text-neutral-700 underline">
-              Privacy Policy
-            </Link>
-            .
-          </span>
-        </label>
         <Turnstile siteKey={TURNSTILE_SITE_KEY} />
         <button
           type="submit"

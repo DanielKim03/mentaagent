@@ -140,11 +140,6 @@ export default async function PublicLandingPage() {
 
       <footer className="border-t border-neutral-200 py-8 text-center text-xs text-neutral-500">
         <div>© {new Date().getFullYear()} MentaAgent</div>
-        <nav className="mt-2 flex justify-center gap-4">
-          <Link href="/terms" className="hover:underline">Terms</Link>
-          <Link href="/privacy" className="hover:underline">Privacy</Link>
-          <Link href="/refund" className="hover:underline">Refunds</Link>
-        </nav>
       </footer>
     </main>
   );

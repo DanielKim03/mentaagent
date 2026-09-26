@@ -43,16 +43,25 @@ if (isProd) {
   );
 }
 
+// Public origins allowed to POST Server Actions when behind a proxy.
+// Taken from WEB_ORIGIN (comma-separated), e.g. https://example.com
+const allowedOrigins = (process.env.WEB_ORIGIN ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean)
+  .map((o) => {
+    try { return new URL(o).host; } catch { return o; }
+  });
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   experimental: {
-    // Behind Railway's edge proxy on a custom domain, the forwarded
-    // x-forwarded-host (mentapath.com) doesn't match the container's own
-    // Host, so Next 14's Server Actions CSRF guard rejects the action POST
-    // and the form silently does nothing. Allow the real public origins.
+    // Behind a proxy on a custom domain, the forwarded host doesn't match the
+    // container's own Host, so Next 14's Server Actions CSRF guard rejects the
+    // POST and the form silently does nothing. Allow the public origins.
     serverActions: {
-      allowedOrigins: ["mentapath.com", "www.mentapath.com", "*.up.railway.app"],
+      allowedOrigins,
     },
     // Don't reuse a dynamic page's RSC payload from the client Router Cache on
     // soft navigation — every page renders live tenant data (lib/api.ts is
