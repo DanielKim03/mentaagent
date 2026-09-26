@@ -10,8 +10,8 @@ x-app-env: &app-env
   NODE_ENV: production
   DATABASE_URL: postgresql://mentaagent:mentaagent@postgres:5432/mentaagent
   REDIS_URL: redis://redis:6379
-  WEB_ORIGIN: http://localhost:3000
-  AUTH_URL: http://localhost:3000
+  WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+  AUTH_URL: ${WEB_ORIGIN:-http://localhost:3000}
   API_INTERNAL_URL: http://api:3001
   STORAGE_PATH: /data
 
@@ -126,6 +126,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
     env_file:
       - path: .env
         required: false
@@ -139,7 +141,7 @@ services:
         . /secrets/app.env &&
         export AUTH_SECRET="$${AUTH_SECRET:-$$GEN_AUTH_SECRET}"
         INTERNAL_API_SECRET="$${INTERNAL_API_SECRET:-$$GEN_INTERNAL_API_SECRET}" &&
-        exec pnpm --filter web start
+        exec node apps/web/server.js
     ports:
       - "3000:3000"
     volumes:

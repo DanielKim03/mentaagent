@@ -64,7 +64,13 @@ const allowedOrigins = (process.env.WEB_ORIGIN ?? "")
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Self-contained server with only the traced dependencies: keeps the Docker
+  // image small. Note: this config (incl. allowedOrigins) is fixed at build
+  // time in standalone mode, so WEB_ORIGIN is passed as a Docker build arg.
+  output: "standalone",
   experimental: {
+    // Trace from the monorepo root so workspace dependencies are included.
+    outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
     // Behind a proxy on a custom domain, the forwarded host doesn't match the
     // container's own Host, so Next 14's Server Actions CSRF guard rejects the
     // POST and the form silently does nothing. Allow the public origins.
