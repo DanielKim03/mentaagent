@@ -1,9 +1,28 @@
+# `docker compose up` runs the whole app at http://localhost:3000 with zero
+# API keys (stub LLM provider). For local development, start only the
+# databases instead: `docker compose up -d postgres redis`.
+#
+# Optional keys (LLM_API_KEY etc.) are read from .env if it exists. Values
+# under `environment:` below win over .env, so a dev .env pointing at
+# localhost does not break the containers.
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://mentaagent:mentaagent@postgres:5432/mentaagent
+  REDIS_URL: redis://redis:6379
+  WEB_ORIGIN: http://localhost:3000
+  AUTH_URL: http://localhost:3000
+  API_INTERNAL_URL: http://api:3001
+  STORAGE_PATH: /data
+
+# Each app service sources /secrets/app.env: a secret set in .env wins,
+# otherwise the value the `secrets` service generated on first run.
+
 services:
   postgres:
     # pgvector/pgvector = official postgres image + the pgvector extension
     # (semantic retrieval over document chunks).
     image: pgvector/pgvector:pg16
-    container_name: mentaagent-postgres
     environment:
       POSTGRES_USER: mentaagent
       POSTGRES_PASSWORD: mentaagent
@@ -20,7 +39,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: mentaagent-redis
     ports:
       - "6380:6379"
     volumes:
@@ -31,6 +49,107 @@ services:
       timeout: 5s
       retries: 5
 
+  # Generates AUTH_SECRET and INTERNAL_API_SECRET once and keeps them in a
+  # volume, so sessions survive restarts and nobody has to invent secrets.
+  secrets:
+    image: alpine:3.20
+    command:
+      - sh
+      - -c
+      - |
+        f=/secrets/app.env
+        [ -s "$$f" ] && exit 0
+        gen() { head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
+        echo "GEN_AUTH_SECRET=$$(gen)" > "$$f"
+        echo "GEN_INTERNAL_API_SECRET=$$(gen)" >> "$$f"
+    volumes:
+      - secrets:/secrets
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-env
+      PORT: "3001"
+    command:
+      - sh
+      - -c
+      - >-
+        . /secrets/app.env &&
+        export INTERNAL_API_SECRET="$${INTERNAL_API_SECRET:-$$GEN_INTERNAL_API_SECRET}" &&
+        node apps/api/dist/db/migrate.js &&
+        exec node apps/api/dist/server.js
+    volumes:
+      - uploads:/data
+      - secrets:/secrets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      secrets:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-env
+    command:
+      - sh
+      - -c
+      - >-
+        . /secrets/app.env &&
+        export INTERNAL_API_SECRET="$${INTERNAL_API_SECRET:-$$GEN_INTERNAL_API_SECRET}" &&
+        exec node apps/api/dist/worker.js
+    volumes:
+      - uploads:/data
+      - secrets:/secrets:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-env
+      PORT: "3000"
+    command:
+      - sh
+      - -c
+      - >-
+        . /secrets/app.env &&
+        export AUTH_SECRET="$${AUTH_SECRET:-$$GEN_AUTH_SECRET}"
+        INTERNAL_API_SECRET="$${INTERNAL_API_SECRET:-$$GEN_INTERNAL_API_SECRET}" &&
+        exec pnpm --filter web start
+    ports:
+      - "3000:3000"
+    volumes:
+      - secrets:/secrets:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
+  uploads:
+  secrets:

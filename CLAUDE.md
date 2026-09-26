@@ -23,11 +23,17 @@ pnpm monorepo, three deployable processes + Postgres 16 (pgvector) + Redis:
   repeatable tick every 15 min (idle-session reflect sweep, weekly monitor
   fan-out, nightly memory consolidation, embed backfill).
 
+## Run it (no setup)
+
+`docker compose up` builds and runs everything (postgres, redis, api, worker,
+web) at http://localhost:3000 with zero API keys; sign up to create a
+workspace. Secrets are generated on first run; optional keys come from `.env`.
+
 ## Local dev
 
 ```bash
-docker compose up -d           # postgres :5433, redis :6380 (offset to coexist with Mentapath)
-cp .env.example .env           # blank optional vars are fine (treated as unset)
+docker compose up -d postgres redis   # postgres :5433, redis :6380 (offset ports)
+cp .env.example .env           # blank vars are fine: treated as unset, dev AUTH_SECRET fallback
 pnpm install
 pnpm --filter api migrate && pnpm --filter api seed   # dev@example.com / devpassword
 pnpm --filter api dev          # API :3001

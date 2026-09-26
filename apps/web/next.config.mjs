@@ -1,3 +1,11 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+// One .env at the repo root serves both apps (the API loads the same file).
+// Node's loader never overrides variables already set; absent in Docker images.
+const rootEnv = fileURLToPath(new URL("../../.env", import.meta.url));
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === "production";
 
