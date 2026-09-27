@@ -1,5 +1,5 @@
-# API image. Also runs the Worker — the Worker service on Railway uses this
-# same image with a Start Command override (`node apps/api/dist/worker.js`).
+# API image. Also runs the worker (docker-compose.yml overrides the command
+# with `node apps/api/dist/worker.js`).
 FROM node:20-alpine AS builder
 WORKDIR /app
 

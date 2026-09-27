@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import ServiceWorkerCleanup from "@/components/ServiceWorkerCleanup";
 
 const SITE_URL = process.env.WEB_ORIGIN?.split(",")[0]?.trim() || "http://localhost:3000";
 
@@ -32,7 +31,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
-        <ServiceWorkerCleanup />
         {children}
       </body>
     </html>

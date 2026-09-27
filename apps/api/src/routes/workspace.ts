@@ -1,12 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { pool } from "../db/client.js";
-import { requireAdminRole } from "../lib/auth.js";
 
 export async function workspaceRoutes(app: FastifyInstance) {
   app.get("/api/workspace", async (req) => {
     const { rows } = await pool.query(
-      `SELECT id, name, business_profile, plan, source_upload_quota, created_at
+      `SELECT id, name, business_profile, created_at
          FROM workspaces WHERE id = $1`,
       [req.workspaceId]
     );
@@ -29,9 +28,6 @@ export async function workspaceRoutes(app: FastifyInstance) {
       .optional(),
   });
   app.patch("/api/workspace", async (req, reply) => {
-    // Business profile grounds every agent run — workspace-wide config, so
-    // admin-only even though any member can reach this via the proxy.
-    if (!requireAdminRole(req, reply)) return;
     const parsed = profileSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "invalid profile", issues: parsed.error.issues });

@@ -9,9 +9,8 @@ import { createReport } from "../report/orchestrator.js";
 
 export { backfillEntities };
 
-// Maintenance sweeps, driven by a single repeatable tick (Mentapath's
-// digest-scheduler fan-out pattern). Each sweep is idempotent and gated on
-// timestamps so a missed/double tick is harmless.
+// Maintenance sweeps, driven by a single repeatable tick. Each sweep is
+// idempotent and gated on timestamps so a missed/double tick is harmless.
 
 // Chat sessions idle >30min with new content since the last reflection →
 // background reflect run (memory extraction + session summary).
@@ -171,7 +170,7 @@ export async function sweepEmbedBackfill(): Promise<number> {
   );
   if (rows.length === 0) return 0;
 
-  // Group by workspace so budget metering lands on the right tenant.
+  // Group by workspace so budget metering lands on the right workspace.
   const byWorkspace = new Map<string, { id: string; content: string }[]>();
   for (const r of rows) {
     const list = byWorkspace.get(r.workspace_id) ?? [];
@@ -201,8 +200,7 @@ export async function sweepEmbedBackfill(): Promise<number> {
 
 // Auto-generate reports on a cadence. Monthly takes precedence over weekly
 // (a monthly report also satisfies the week). The run is kind=report,
-// trigger=schedule; when it finishes ready it's emailed to members
-// (see runner afterRun). Stamped BEFORE enqueuing so a double tick can't
+// trigger=schedule. Stamped BEFORE enqueuing so a double tick can't
 // double-generate.
 export async function sweepScheduledReports(): Promise<number> {
   const { rows } = await pool.query<{

@@ -1,16 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import * as Sentry from "@sentry/node";
 import { env } from "../env.js";
 import { DEFAULT_WORKSPACE_ID } from "./workspace.js";
 
 declare module "fastify" {
   interface FastifyRequest {
     workspaceId: string;
-    // Always null: MentaAgent runs locally for one person, with no accounts.
-    // Kept on the request so routes that record an author still compile.
-    userId: string | null;
-    userEmail: string | null;
-    role: string | null;
   }
 }
 
@@ -31,9 +25,6 @@ export function safeEqual(a: string, b: string): boolean {
 export async function registerAuthHook(app: FastifyInstance) {
   app.addHook("onRequest", async (req: FastifyRequest, reply: FastifyReply) => {
     req.workspaceId = DEFAULT_WORKSPACE_ID;
-    req.userId = null;
-    req.userEmail = null;
-    req.role = "admin";
 
     const path = req.url.split("?")[0];
     if (PUBLIC_PATHS.has(path)) return;
@@ -50,26 +41,5 @@ export async function registerAuthHook(app: FastifyInstance) {
     } else if (env.NODE_ENV === "production") {
       return reply.code(500).send({ error: "auth not configured" });
     }
-
-    if (env.SENTRY_DSN) {
-      Sentry.setTag("workspace_id", req.workspaceId);
-    }
   });
-}
-
-// Guard for admin-only routes (workspace deletion, schema/config writes).
-// The web enforces role in its Server Actions, but the generic /api/proxy
-// faithfully forwards ANY authenticated member's request, so destructive and
-// config-changing endpoints MUST also enforce role here at the trust boundary.
-// Returns true when the caller may proceed; otherwise sends 403 and returns
-// false (caller should `return` immediately).
-export function requireAdminRole(
-  req: FastifyRequest,
-  reply: FastifyReply
-): boolean {
-  if (req.role !== "admin") {
-    reply.code(403).send({ error: "admin role required" });
-    return false;
-  }
-  return true;
 }

@@ -113,8 +113,9 @@ launch, and released here as finished work: accounts and billing removed, one
 person per install. There is no hosted version and no company behind it.
 
 What works: everything above, tested end to end on a fresh clone with
-`docker compose up`. What is not built: connectors (Google Drive and others;
-the seam exists), PDF export of reports beyond print styles.
+`docker compose up`. What is not built: connectors (Google Drive and others),
+a button to generate a report on demand, PDF export of reports beyond print
+styles.
 
 The maintainer starts 18 months of military service in October 2026 and will
 be slow to answer issues and pull requests until April 2028. The code is

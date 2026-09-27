@@ -9,12 +9,11 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === "production";
 
-// Pragmatic CSP for a Next.js App Router app behind Cloudflare. 'unsafe-inline'
-// is required for Next's inline bootstrap/hydration scripts and Tailwind's
-// injected styles (a nonce-based policy is a future hardening). It still locks
-// down the high-value vectors: object-src none, base-uri self, frame-ancestors
-// none (clickjacking), form-action self, and an explicit allowlist of the only
-// external origins we load — Cloudflare Turnstile and Paddle checkout.
+// Pragmatic CSP for a Next.js App Router app. 'unsafe-inline' is required for
+// Next's inline bootstrap/hydration scripts and Tailwind's injected styles. It
+// still locks down the high-value vectors: object-src none, base-uri self,
+// frame-ancestors none (clickjacking), form-action self, and no external
+// scripts, frames or connections.
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -24,9 +23,9 @@ const csp = [
   "img-src 'self' data: https:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://cdn.paddle.com https://sandbox-cdn.paddle.com",
-  "frame-src https://challenges.cloudflare.com https://*.paddle.com",
-  "connect-src 'self' https://*.paddle.com https://challenges.cloudflare.com",
+  "script-src 'self' 'unsafe-inline'",
+  "frame-src 'none'",
+  "connect-src 'self'",
 ].join("; ");
 
 const securityHeaders = [
@@ -78,7 +77,7 @@ const nextConfig = {
       allowedOrigins,
     },
     // Don't reuse a dynamic page's RSC payload from the client Router Cache on
-    // soft navigation — every page renders live tenant data (lib/api.ts is
+    // soft navigation — every page renders live data (lib/api.ts is
     // always no-store). Without this, returning to /chat could serve a stale
     // render that missed an in-flight run, so a running chat wouldn't resume.
     staleTimes: { dynamic: 0 },

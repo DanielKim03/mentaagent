@@ -2,8 +2,7 @@ import { pool } from "../../db/client.js";
 import { callEmbeddings, getEmbeddingsClient } from "../llm/client.js";
 
 // Hybrid retrieval over chunks: pgvector cosine + Postgres FTS fused with
-// Reciprocal Rank Fusion (adapted from Mentapath's query/retrieval.ts, link-
-// graph hop dropped — no wiki). Degrades to FTS-only when embeddings are
+// Reciprocal Rank Fusion. Degrades to FTS-only when embeddings are
 // unavailable (no key, no pgvector, or nothing embedded yet).
 
 const RRF_K = 60;

@@ -1,16 +1,4 @@
 import { env } from "./env.js";
-import * as Sentry from "@sentry/node";
-
-// Skip init outside production so dev errors don't pollute the prod
-// Sentry project.
-if (env.SENTRY_DSN && env.NODE_ENV === "production") {
-  Sentry.init({
-    dsn: env.SENTRY_DSN,
-    environment: env.NODE_ENV,
-    tracesSampleRate: 0,
-  });
-}
-
 import { buildApp } from "./app.js";
 import { pool } from "./db/client.js";
 import { startEventBridge } from "./queue/events.js";

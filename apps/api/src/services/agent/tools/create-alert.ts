@@ -2,7 +2,7 @@ import { z } from "zod";
 import { pool } from "../../../db/client.js";
 import { registerTool } from "../registry.js";
 
-// Validated writer with Mentapath's suggest-runner quality gates baked in:
+// Validated writer with quality gates baked in:
 //  - severity floor (no "low" — too generic to be worth interrupting anyone)
 //  - pg_trgm dedup against open AND dismissed alerts: re-finding a known issue
 //    is noise, and re-surfacing something the owner explicitly dismissed is
@@ -10,8 +10,7 @@ import { registerTool } from "../registry.js";
 //  - max 5 alerts per run (forces selectivity)
 //  - global open-alert ceiling (below): the per-run cap + dedup still let
 //    distinct findings pile up across runs (chat, the weekly monitor, the
-//    on-upload review) until the alert center is noise — Mentapath's actual
-//    failure mode. Hold a focused backlog; only CRITICAL findings override it.
+//    on-upload review) until the alert center is noise. Hold a focused backlog; only CRITICAL findings override it.
 // Living inside the tool means chat, report, and monitor runs all get the
 // gates for free.
 

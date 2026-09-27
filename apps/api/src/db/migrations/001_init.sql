@@ -1,13 +1,13 @@
--- MentaAgent consolidated initial schema.
--- Adapted from Mentapath's proven migrations (auth, billing, usage, alerts)
--- plus the new agent-product tables (documents/chunks, agent runs, memory,
--- skills, watchlist, reports, connections).
+-- MentaAgent schema.
+--
+-- Single user, self-hosted: there is one workspace (seeded at the bottom),
+-- but every table keeps a workspace_id so the data model stays explicit.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ---------------------------------------------------------------------------
--- Tenancy, auth, billing (Mentapath shapes, wiki-free)
+-- Workspace and model settings
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE workspaces (
@@ -17,75 +17,33 @@ CREATE TABLE workspaces (
   -- goals/pains, advisor_style (direct|coaching|detailed). Injected into
   -- every agent system prompt.
   business_profile JSONB NOT NULL DEFAULT '{}',
-  -- Billing (Paddle is the single writer for paid-plan caps).
-  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'max')),
-  llm_cap_usd_micros BIGINT,
-  seat_limit INT DEFAULT 1,
-  source_upload_quota INT DEFAULT 3,
-  paddle_customer_id TEXT,
-  paddle_subscription_id TEXT,
-  subscription_status TEXT,
-  current_period_start TIMESTAMPTZ,
-  current_period_end TIMESTAMPTZ,
-  last_billing_event_at TIMESTAMPTZ,
-  -- Scheduled monitoring bookkeeping.
+  -- Scheduled monitoring and report bookkeeping.
   last_monitor_at TIMESTAMPTZ,
+  last_weekly_report_at TIMESTAMPTZ,
+  last_monthly_report_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT UNIQUE NOT NULL,
-  name TEXT,
-  password_hash TEXT,
-  email_verified TIMESTAMPTZ,
-  image TEXT,
-  workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
-  role TEXT NOT NULL DEFAULT 'member',
-  alert_emails BOOLEAN NOT NULL DEFAULT TRUE,
-  session_token_version INTEGER NOT NULL DEFAULT 0,
-  last_seen_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
--- Case-insensitive uniqueness (sign-in normalizes, but belt and braces).
-CREATE UNIQUE INDEX users_email_lower_idx ON users (LOWER(email));
-
-CREATE TABLE verification_tokens (
-  identifier TEXT NOT NULL,
-  token TEXT NOT NULL,
-  expires TIMESTAMPTZ NOT NULL,
-  PRIMARY KEY (identifier, token)
+-- Model provider settings entered on the web Settings page. One row. A NULL
+-- column falls back to the matching environment variable. Stored in plain
+-- text: the database is on the owner's own machine.
+CREATE TABLE llm_settings (
+  id                  BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+  llm_base_url        TEXT,
+  llm_api_key         TEXT,
+  agent_model         TEXT,
+  heavy_model         TEXT,
+  llm_tool_mode       TEXT CHECK (llm_tool_mode IN ('native', 'hermes-xml')),
+  embeddings_base_url TEXT,
+  embeddings_api_key  TEXT,
+  embeddings_model    TEXT,
+  vision_model        TEXT,
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE accounts (
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL,
-  provider TEXT NOT NULL,
-  provider_account_id TEXT NOT NULL,
-  refresh_token TEXT,
-  access_token TEXT,
-  expires_at BIGINT,
-  token_type TEXT,
-  scope TEXT,
-  id_token TEXT,
-  session_state TEXT,
-  PRIMARY KEY (provider, provider_account_id)
-);
-CREATE INDEX accounts_user_id_idx ON accounts(user_id);
-
--- Source of truth for "who belongs to which workspace, with what role".
--- The API trust boundary re-verifies this pair on every request.
-CREATE TABLE memberships (
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'member',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (user_id, workspace_id)
-);
-CREATE INDEX memberships_workspace_idx ON memberships(workspace_id);
-
--- LLM usage metering: every chat/embedding call is pre-charged here under a
--- per-workspace advisory lock, then reconciled to real token counts.
+-- LLM usage metering: every chat/embedding call is pre-charged here under an
+-- advisory lock, then reconciled to real token counts. Feeds the optional
+-- daily spend cap and the per-run cost caps.
 CREATE TABLE llm_usage (
   id BIGSERIAL PRIMARY KEY,
   workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -98,24 +56,6 @@ CREATE TABLE llm_usage (
 );
 CREATE INDEX llm_usage_workspace_created_idx ON llm_usage(workspace_id, created_at);
 CREATE INDEX llm_usage_created_at_idx ON llm_usage(created_at);
-
--- Deploy-surviving store for the web app's rate limiters.
-CREATE TABLE rate_limits (
-  key      TEXT PRIMARY KEY,
-  count    INTEGER NOT NULL,
-  reset_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX rate_limits_reset_at_idx ON rate_limits (reset_at);
-
-CREATE TABLE activity_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  action TEXT NOT NULL,
-  description TEXT,
-  details JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX activity_log_workspace_idx ON activity_log(workspace_id, created_at DESC);
 
 -- ---------------------------------------------------------------------------
 -- Sources (raw uploads) and the knowledge layer (documents → chunks)
@@ -130,22 +70,17 @@ CREATE TABLE sources (
   file_size INTEGER,
   status TEXT NOT NULL DEFAULT 'pending',
   metadata JSONB NOT NULL DEFAULT '{}',
-  uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
   processed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX sources_workspace_idx ON sources(workspace_id, created_at DESC);
 
--- A normalized document the agent can read. One upload may produce one
--- document; a connector sync inserts documents directly (same entry point —
--- that's the connector contract). external_id identifies a document within
--- a connection for incremental re-sync (changed docs replace by external_id).
+-- A normalized document the agent can read. One upload produces one document;
+-- re-uploading a file with the same name replaces it.
 CREATE TABLE documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   source_id UUID REFERENCES sources(id) ON DELETE CASCADE,
-  connection_id UUID, -- FK added with connections table below
-  external_id TEXT,
   title TEXT NOT NULL,
   doc_type TEXT NOT NULL DEFAULT 'other',
   content_text TEXT NOT NULL,
@@ -153,12 +88,11 @@ CREATE TABLE documents (
   metadata JSONB NOT NULL DEFAULT '{}',
   token_count INT,
   modified_at TIMESTAMPTZ,
+  -- When the document went through entity extraction (knowledge graph).
+  entities_extracted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX documents_workspace_idx ON documents(workspace_id, created_at DESC);
-CREATE UNIQUE INDEX documents_external_idx
-  ON documents(workspace_id, connection_id, external_id)
-  WHERE connection_id IS NOT NULL AND external_id IS NOT NULL;
 
 -- Retrieval units. fts is generated so FTS always works; embedding is filled
 -- by the embed sweep when an embeddings key is configured (else FTS-only).
@@ -184,7 +118,6 @@ CREATE INDEX chunks_fts_idx ON chunks USING GIN (fts);
 CREATE TABLE agent_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
   kind TEXT NOT NULL DEFAULT 'chat',
   title TEXT,
   -- Rolling summary written by reflect runs when the session idles;
@@ -300,7 +233,7 @@ CREATE TABLE watch_items (
 CREATE INDEX watch_items_due_idx ON watch_items(workspace_id, next_due_at);
 
 -- ---------------------------------------------------------------------------
--- Alerts (findings) — Mentapath shape + agent provenance + outcome tracking
+-- Alerts (findings) with agent provenance and outcome tracking
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE alerts (
@@ -313,8 +246,9 @@ CREATE TABLE alerts (
   recommended_action TEXT,
   status TEXT NOT NULL DEFAULT 'open',
   due_at TIMESTAMPTZ,
-  notified_at TIMESTAMPTZ,
   resolved_at TIMESTAMPTZ,
+  -- Dismissed alerts stay visible and restorable for 24h, then are purged.
+  dismissed_at TIMESTAMPTZ,
   agent_run_id UUID REFERENCES agent_runs(id) ON DELETE SET NULL,
   -- Wins ledger: what actually happened after the recommendation.
   outcome TEXT,
@@ -323,6 +257,7 @@ CREATE TABLE alerts (
 );
 CREATE INDEX alerts_workspace_status_idx ON alerts(workspace_id, status, severity);
 CREATE INDEX alerts_due_idx ON alerts(due_at) WHERE status = 'open' AND due_at IS NOT NULL;
+CREATE INDEX alerts_dismissed_idx ON alerts(dismissed_at) WHERE status = 'dismissed';
 
 -- ---------------------------------------------------------------------------
 -- Reports
@@ -333,6 +268,8 @@ CREATE TABLE reports (
   workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   run_id UUID REFERENCES agent_runs(id) ON DELETE SET NULL,
   kind TEXT NOT NULL DEFAULT 'gap_analysis',
+  -- weekly | monthly (scheduled) or manual
+  period TEXT NOT NULL DEFAULT 'manual',
   title TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'generating'
     CHECK (status IN ('generating', 'ready', 'failed')),
@@ -360,34 +297,62 @@ ALTER TABLE agent_runs
   FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE SET NULL;
 
 -- ---------------------------------------------------------------------------
--- Connectors (framework lands now; first connector ships Phase 3)
+-- Knowledge graph: entities extracted from documents, and the edges that
+-- connect documents through them. Powers the /graph page and the
+-- find_connections agent tool.
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE connections (
+CREATE TABLE entities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  provider TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'error', 'revoked')),
-  auth_encrypted BYTEA,
-  scopes TEXT[] NOT NULL DEFAULT '{}',
-  sync_cursor JSONB NOT NULL DEFAULT '{}',
-  last_sync_at TIMESTAMPTZ,
-  error TEXT,
-  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  -- lowercased/trimmed key for dedup within a workspace
+  norm TEXT NOT NULL,
+  entity_type TEXT NOT NULL DEFAULT 'other'
+    CHECK (entity_type IN ('customer', 'vendor', 'product', 'person', 'contract', 'location', 'other')),
+  mention_count INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (workspace_id, provider)
+  UNIQUE (workspace_id, norm)
 );
+CREATE INDEX entities_workspace_idx ON entities(workspace_id);
 
-ALTER TABLE documents
-  ADD CONSTRAINT documents_connection_fk
-  FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE CASCADE;
-
-CREATE TABLE sync_runs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  connection_id UUID NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'running',
-  stats JSONB NOT NULL DEFAULT '{}',
-  error TEXT,
-  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  finished_at TIMESTAMPTZ
+CREATE TABLE document_entities (
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  PRIMARY KEY (document_id, entity_id)
 );
+CREATE INDEX document_entities_entity_idx ON document_entities(entity_id);
+CREATE INDEX document_entities_workspace_idx ON document_entities(workspace_id);
+
+-- ---------------------------------------------------------------------------
+-- Semantic retrieval: per-chunk embeddings (pgvector), fused with full-text
+-- search at query time. If Postgres has no pgvector this block does nothing
+-- and search stays full-text only. vector(1024) matches BAAI/bge-m3; a model
+-- with another dimension needs a column rebuild.
+-- ---------------------------------------------------------------------------
+
+DO $$
+BEGIN
+  BEGIN
+    CREATE EXTENSION IF NOT EXISTS vector;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'pgvector unavailable (%) — semantic retrieval disabled, FTS-only', SQLERRM;
+  END;
+
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+    ALTER TABLE chunks ADD COLUMN IF NOT EXISTS embedding vector(1024);
+    CREATE INDEX IF NOT EXISTS chunks_embedding_idx
+      ON chunks USING hnsw (embedding vector_cosine_ops);
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Seed: the one workspace (fixed id, see DEFAULT_WORKSPACE_ID in the API) and
+-- the one settings row.
+-- ---------------------------------------------------------------------------
+
+INSERT INTO workspaces (id, name)
+VALUES ('00000000-0000-0000-0000-000000000001', 'My business');
+
+INSERT INTO llm_settings (id) VALUES (TRUE);

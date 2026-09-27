@@ -29,9 +29,6 @@ export async function parseSource(
   fileType: string,
   filePath: string
 ): Promise<ParsedSource> {
-  // Fetch the bytes from wherever the upload was stored (S3/R2 in prod, local
-  // disk in dev). This is the step that used to ENOENT when the Worker looked
-  // for a file the API had saved to a different service's disk.
   const buf = await readSourceFile(workspaceId, filePath);
   switch (fileType.toLowerCase()) {
     case "csv":

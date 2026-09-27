@@ -22,7 +22,7 @@ export async function sourcesRoutes(app: FastifyInstance) {
     return { sources: rows };
   });
 
-  // Multipart upload → sources row (+ quota decrement) → ingest queue.
+  // Multipart upload → sources row → ingest queue.
   app.post("/api/sources", async (req, reply) => {
     const file = await req.file();
     if (!file) return reply.code(400).send({ error: "no file provided" });
@@ -36,33 +36,18 @@ export async function sourcesRoutes(app: FastifyInstance) {
     }
     const data = await file.toBuffer();
 
-    // Atomic quota decrement (NULL = unlimited). Refunded by the worker on
-    // final processing failure.
-    const { rows: quota } = await pool.query<{ ok: boolean }>(
-      `UPDATE workspaces
-          SET source_upload_quota = CASE
-                WHEN source_upload_quota IS NULL THEN NULL
-                ELSE source_upload_quota - 1 END
-        WHERE id = $1 AND (source_upload_quota IS NULL OR source_upload_quota > 0)
-        RETURNING TRUE AS ok`,
-      [req.workspaceId]
-    );
-    if (quota.length === 0) {
-      return reply.code(402).send({ error: "upload quota exhausted" });
-    }
-
     // Re-upload of a same-named file replaces the old source (and its
-    // document via cascade) — Mentapath semantics.
+    // document via cascade).
     await pool.query(
       "DELETE FROM sources WHERE workspace_id = $1 AND filename = $2",
       [req.workspaceId, file.filename]
     );
 
     const { rows } = await pool.query<{ id: string }>(
-      `INSERT INTO sources (workspace_id, filename, file_type, file_path, file_size, uploaded_by)
-       VALUES ($1, $2, $3, '', $4, $5)
+      `INSERT INTO sources (workspace_id, filename, file_type, file_path, file_size)
+       VALUES ($1, $2, $3, '', $4)
        RETURNING id`,
-      [req.workspaceId, file.filename, ext.slice(1), data.length, req.userId]
+      [req.workspaceId, file.filename, ext.slice(1), data.length]
     );
     const sourceId = rows[0].id;
 
@@ -81,26 +66,15 @@ export async function sourcesRoutes(app: FastifyInstance) {
     return reply.code(202).send({ source_id: sourceId, status: "pending" });
   });
 
-  // Delete a source (cascades to its document, chunks, embeddings). The
-  // upload quota is a ceiling on STORED sources, so deleting frees a slot —
-  // refund it, unless the ingest had already failed (the worker refunds those
-  // on final failure, so refunding again would over-credit).
+  // Delete a source (cascades to its document, chunks, embeddings).
   app.delete<{ Params: { id: string } }>(
     "/api/sources/:id",
     async (req, reply) => {
-      const { rows } = await pool.query<{ status: string }>(
-        "DELETE FROM sources WHERE id = $1 AND workspace_id = $2 RETURNING status",
+      const { rowCount } = await pool.query(
+        "DELETE FROM sources WHERE id = $1 AND workspace_id = $2",
         [req.params.id, req.workspaceId]
       );
-      if (rows.length === 0) return reply.code(404).send({ error: "not found" });
-      if (rows[0].status !== "failed") {
-        await pool.query(
-          `UPDATE workspaces
-              SET source_upload_quota = source_upload_quota + 1
-            WHERE id = $1 AND source_upload_quota IS NOT NULL`,
-          [req.workspaceId]
-        );
-      }
+      if (rowCount === 0) return reply.code(404).send({ error: "not found" });
       return { deleted: true };
     }
   );

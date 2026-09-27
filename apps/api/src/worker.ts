@@ -1,14 +1,4 @@
 import { env } from "./env.js";
-import * as Sentry from "@sentry/node";
-
-if (env.SENTRY_DSN && env.NODE_ENV === "production") {
-  Sentry.init({
-    dsn: env.SENTRY_DSN,
-    environment: env.NODE_ENV,
-    tracesSampleRate: 0,
-  });
-}
-
 import { Queue, Worker } from "bullmq";
 import { pool } from "./db/client.js";
 import { closeEventPublisher, emitStatus } from "./queue/events.js";
@@ -30,7 +20,6 @@ import {
   sweepMonitorRuns,
   sweepScheduledReports,
 } from "./services/monitor/schedule.js";
-import { runImminentAlertSweep } from "./services/notify/imminent.js";
 import { seedGlobalSkills } from "./services/skills/store.js";
 import { llmConfig, refreshLlmConfig, startLlmConfigRefresh } from "./services/llm/settings.js";
 
@@ -73,17 +62,6 @@ const ingestWorker = new Worker<IngestJobData>(
         "UPDATE sources SET status = 'failed', metadata = metadata || $2::jsonb WHERE id = $1",
         [sourceId, JSON.stringify({ error: message })]
       );
-      // Refund the quota slot ONCE, after all retries are exhausted, so a
-      // failure the user didn't cause doesn't burn a scarce slot.
-      const isFinalAttempt = job.attemptsMade >= (job.opts.attempts ?? 1);
-      if (isFinalAttempt) {
-        await pool.query(
-          `UPDATE workspaces
-              SET source_upload_quota = source_upload_quota + 1
-            WHERE id = $1 AND source_upload_quota IS NOT NULL`,
-          [workspaceId]
-        );
-      }
       emitStatus({ sourceId, status: "failed", message });
       throw err;
     }
@@ -111,7 +89,7 @@ const maintenanceQueue = new Queue(MAINTENANCE_QUEUE, {
 const maintenanceWorker = new Worker(
   MAINTENANCE_QUEUE,
   async () => {
-    const [reflected, monitored, consolidated, embedded, entities, reports, notified] =
+    const [reflected, monitored, consolidated, embedded, entities, reports] =
       await Promise.all([
         sweepIdleSessions(),
         sweepMonitorRuns(),
@@ -119,11 +97,10 @@ const maintenanceWorker = new Worker(
         sweepEmbedBackfill(),
         backfillEntities(),
         sweepScheduledReports(),
-        runImminentAlertSweep(),
       ]);
-    if (reflected || monitored || consolidated || embedded || entities || reports || notified.emailed) {
+    if (reflected || monitored || consolidated || embedded || entities || reports) {
       console.log(
-        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded} entities=${entities} reports=${reports} alert-emails=${notified.emailed}`
+        `[maintenance] reflect=${reflected} monitor=${monitored} consolidate=${consolidated} embed=${embedded} entities=${entities} reports=${reports}`
       );
     }
   },
@@ -154,19 +131,9 @@ startLlmConfigRefresh();
     `[llm] base=${c.baseUrl} model=${c.agentModel} ` +
       `key=${c.apiKey ? "set" : "<unset → stub>"}`
   );
-  // Host only (no credentials): confirms DB/Redis are on the internal Railway
-  // network (…railway.internal) vs the slower public proxy (…proxy.rlwy.net).
-  const host = (u: string) => {
-    try {
-      return new URL(u).host;
-    } catch {
-      return "?";
-    }
-  };
-  console.log(`[infra] db=${host(env.DATABASE_URL)} redis=${host(env.REDIS_URL)}`);
 }
 
-// --- graceful shutdown (drain in-flight jobs under Railway's SIGKILL window) ----
+// --- graceful shutdown (drain in-flight jobs before the container is killed) ----
 
 const SHUTDOWN_TIMEOUT_MS = 25_000;
 let shuttingDown = false;

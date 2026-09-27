@@ -19,8 +19,7 @@ const schema = z.object({
   // Unset LLM_API_KEY → stub provider: the agent loop runs with canned
   // responses so the whole pipeline is exercisable without spend.
   // .trim() on the credentials/URLs/models is load-bearing: a stray leading or
-  // trailing space pasted into a host's env var (e.g. Railway, which stores the
-  // value literally) would otherwise be sent as part of the bearer token and
+  // trailing space pasted into an env var would otherwise be sent as part of the bearer token and
   // get rejected with a 401, or break the model name / base URL.
   LLM_BASE_URL: z.string().trim().url().default("https://api.deepinfra.com/v1/openai"),
   LLM_API_KEY: z.string().trim().optional(),
@@ -47,7 +46,7 @@ const schema = z.object({
   // single-DeepInfra-key setup gets image support with no extra config. When
   // NEITHER a vision nor an embeddings key is configured, image uploads are
   // rejected at the door (see lib/storage.ts) — graceful degradation, no
-  // wasted source-quota slot.
+  // wasted upload.
   VISION_BASE_URL: z.string().trim().url().optional(),
   VISION_API_KEY: z.string().trim().optional(),
   VISION_MODEL: z.string().trim().default("Qwen/Qwen3-VL-30B-A3B-Instruct"),
@@ -69,31 +68,6 @@ const schema = z.object({
     ),
   // Shared secret the web proxy uses to call the API. Required in production.
   INTERNAL_API_SECRET: z.string().min(32).optional(),
-  SENTRY_DSN: z
-    .string()
-    .optional()
-    .transform((v) => (v ? v : undefined))
-    .pipe(z.string().url().optional()),
-
-  // Outbound email (alert digests, due-date reminders). Unset → sweeps no-op.
-  RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default("onboarding@resend.dev"),
-
-  // 32-byte hex key for AES-256-GCM encryption of connector OAuth tokens.
-  CONNECTOR_KEY: z
-    .string()
-    .regex(/^[0-9a-f]{64}$/i, "CONNECTOR_KEY must be 64 hex chars (32 bytes)")
-    .optional(),
-
-  // Object storage (S3-compatible, e.g. Cloudflare R2) for uploaded source
-  // files. REQUIRED in any multi-service deploy where the API and Worker run
-  // as separate services. When all four are set, files read/write to the
-  // bucket; otherwise local disk under STORAGE_PATH (single-host dev).
-  S3_BUCKET: z.string().optional(),
-  S3_ENDPOINT: z.string().url().optional(),
-  S3_ACCESS_KEY_ID: z.string().optional(),
-  S3_SECRET_ACCESS_KEY: z.string().optional(),
-  S3_REGION: z.string().default("auto"),
 });
 
 // Treat empty-string vars as unset so a copied .env.example (with blank

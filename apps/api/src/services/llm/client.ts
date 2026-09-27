@@ -131,7 +131,7 @@ export function computeCostMicros(
   );
 }
 
-export type BudgetScope = "workspace" | "instance";
+export type BudgetScope = "instance";
 
 export class BudgetExceededError extends Error {
   readonly scope: BudgetScope;
@@ -148,48 +148,11 @@ export class BudgetExceededError extends Error {
   }
 }
 
-// Reads spend within the active window using the passed transaction client
-// (so the read sees rows committed by other callers that held the same
-// per-workspace advisory lock). Throws BudgetExceededError if the workspace
-// monthly cap or the instance-wide daily cap is already at/over its ceiling.
-async function assertWithinBudget(
-  tx: PoolClient,
-  workspaceId: string
-): Promise<void> {
-  // Per-workspace monthly cap. NULL = no cap; 0 = blocked; >0 = enforced.
-  const { rows: wsRows } = await tx.query<{ cap: string | null }>(
-    "SELECT llm_cap_usd_micros::text AS cap FROM workspaces WHERE id = $1",
-    [workspaceId]
-  );
-  const capStr = wsRows[0]?.cap ?? null;
-  if (capStr !== null) {
-    const capMicros = BigInt(capStr);
-    if (capMicros === 0n) {
-      throw new BudgetExceededError("workspace", 0, 0);
-    }
-    const { rows } = await tx.query<{ total: string }>(
-      // Window the spend on the current billing period when the workspace
-      // has one (resets on renewal); fall back to the UTC calendar month for
-      // workspaces with no active subscription.
-      `SELECT COALESCE(SUM(cost_usd_micros), 0)::text AS total
-         FROM llm_usage
-        WHERE workspace_id = $1
-          AND created_at >= COALESCE(
-                (SELECT current_period_start FROM workspaces WHERE id = $1),
-                date_trunc('month', NOW() AT TIME ZONE 'UTC'))`,
-      [workspaceId]
-    );
-    const usedMicros = BigInt(rows[0].total);
-    if (usedMicros >= capMicros) {
-      throw new BudgetExceededError(
-        "workspace",
-        Number(usedMicros) / 1_000_000,
-        Number(capMicros) / 1_000_000
-      );
-    }
-  }
-
-  // Instance-wide daily soft cap. 0 disables. Sums across all workspaces.
+// Reads today's spend using the passed transaction client (so the read sees
+// rows committed by other callers that held the same advisory lock). Throws
+// BudgetExceededError if the optional daily cap is already at/over its ceiling.
+async function assertWithinBudget(tx: PoolClient): Promise<void> {
+  // Daily cap (LLM_DAILY_USD_CAP). 0 disables.
   const dailyCapUsd = env.LLM_DAILY_USD_CAP;
   if (dailyCapUsd > 0) {
     const { rows } = await tx.query<{ total: string }>(
@@ -252,7 +215,7 @@ async function reserveBudget(args: {
     await tx.query("SELECT pg_advisory_xact_lock(hashtext($1)::bigint)", [
       args.workspaceId,
     ]);
-    await assertWithinBudget(tx, args.workspaceId);
+    await assertWithinBudget(tx);
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO llm_usage
          (workspace_id, model, operation, prompt_tokens, completion_tokens, cost_usd_micros)

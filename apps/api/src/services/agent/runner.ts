@@ -2,7 +2,6 @@ import { pool } from "../../db/client.js";
 import { agentQueue } from "../../queue/queue.js";
 import { emitAgentEvent } from "../../queue/events.js";
 import { runReportOrchestration } from "../report/orchestrator.js";
-import { emailReport } from "../report/email.js";
 import { buildSystemPrompt } from "./prompts.js";
 import { runAgentLoop } from "./loop.js";
 import type { ChatMessage, NormalizedToolCall, RunKind } from "./types.js";
@@ -160,17 +159,6 @@ export async function handleAgentJob(data: {
     [run.id, result.status, result.error ?? null]
   );
 
-  // A free-tier question is consumed at the API entry point (sessions route).
-  // If the run errored out — an infrastructure failure the owner didn't cause,
-  // not a budget pause or a user cancel — give the question back.
-  if (run.kind === "chat" && result.status === "failed") {
-    await pool.query(
-      `UPDATE workspaces SET question_quota = question_quota + 1
-        WHERE id = $1 AND question_quota IS NOT NULL`,
-      [run.workspace_id]
-    );
-  }
-
   switch (result.status) {
     case "done":
       emitAgentEvent({
@@ -201,8 +189,8 @@ export async function handleAgentJob(data: {
 }
 
 // Post-run hooks: reflect runs write the session summary; chat sessions get
-// titled from their first user message; finished scheduled reports get
-// emailed to the workspace's members.
+// titled from their first user message; failed report runs mark the report
+// failed.
 async function afterRun(
   run: {
     id: string;
@@ -234,14 +222,7 @@ async function afterRun(
     );
   }
   if (run.kind === "report" && run.report_id) {
-    if (status === "done") {
-      // Scheduled reports get emailed to the workspace's members once ready.
-      if (run.trigger === "schedule") {
-        await emailReport(run.report_id).catch((err) =>
-          console.error("[runner] report email failed:", err)
-        );
-      }
-    } else {
+    if (status !== "done") {
       // A crashed/cancelled report run must not leave the report stuck in
       // 'generating' (that would block future reports for this workspace).
       await pool.query(

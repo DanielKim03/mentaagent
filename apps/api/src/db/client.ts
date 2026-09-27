@@ -2,12 +2,8 @@ import { Pool, type PoolConfig } from "pg";
 import { env } from "../env.js";
 
 const config: PoolConfig = { connectionString: env.DATABASE_URL };
-
-// Railway's public Postgres proxy requires SSL; the internal `*.railway.internal`
-// host does not. Auto-enable when the URL points at a Railway proxy host so it
-// works without setting PGSSL; PGSSL=require still forces SSL for any other host.
-const isRailwayProxy = /\.proxy\.rlwy\.net/.test(env.DATABASE_URL);
-if (env.PGSSL === "require" || isRailwayProxy) {
+// A remote Postgres that requires SSL: set PGSSL=require.
+if (env.PGSSL === "require") {
   config.ssl = { rejectUnauthorized: false };
 }
 

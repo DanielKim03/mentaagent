@@ -13,8 +13,8 @@ import { computeSpreadsheetStats } from "./stats.js";
 import { extractDocumentEntities } from "../graph/entities.js";
 import { llmConfig } from "../llm/settings.js";
 
-// Upload → document → chunks → embeddings → summary. Replaces Mentapath's
-// wiki planner/executor with a faithful-raw-text knowledge layer: the agent
+// Upload → document → chunks → embeddings → summary. A faithful-raw-text
+// knowledge layer rather than an LLM-rewritten wiki: the agent
 // gets more value from accurate text + good retrieval than from an LLM-
 // rewritten wiki, and ingest cost drops to ONE cheap call per document.
 //
@@ -137,42 +137,31 @@ async function embedChunks(
   }
 }
 
-// Shared document writer for uploads AND connectors. Replaces any prior
-// document from the same source/external id (re-upload semantics), cascading
-// chunk deletion.
+// Document writer for uploads. Replaces any prior document from the same
+// source (re-upload semantics), cascading chunk deletion.
 export async function upsertDocument(args: {
   workspaceId: string;
   sourceId?: string | null;
-  connectionId?: string | null;
-  externalId?: string | null;
   title: string;
   text: string;
   chunks: Chunk[];
   modifiedAt?: Date | null;
 }): Promise<{ documentId: string; chunkRows: { id: string; content: string }[] }> {
-  // Replace by source (re-upload) or by connector external id (re-sync).
   if (args.sourceId) {
     await pool.query(
       "DELETE FROM documents WHERE workspace_id = $1 AND source_id = $2",
       [args.workspaceId, args.sourceId]
     );
-  } else if (args.connectionId && args.externalId) {
-    await pool.query(
-      "DELETE FROM documents WHERE workspace_id = $1 AND connection_id = $2 AND external_id = $3",
-      [args.workspaceId, args.connectionId, args.externalId]
-    );
   }
 
   const { rows } = await pool.query<{ id: string }>(
     `INSERT INTO documents
-       (workspace_id, source_id, connection_id, external_id, title, content_text, token_count, modified_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (workspace_id, source_id, title, content_text, token_count, modified_at)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id`,
     [
       args.workspaceId,
       args.sourceId ?? null,
-      args.connectionId ?? null,
-      args.externalId ?? null,
       args.title,
       args.text,
       Math.ceil(args.text.length / 4),
@@ -251,16 +240,6 @@ export async function processSource(args: {
     title: source.filename,
     text,
   });
-
-  await pool.query(
-    `INSERT INTO activity_log (workspace_id, action, description, details)
-     VALUES ($1, 'source_ingested', $2, $3)`,
-    [
-      args.workspaceId,
-      `Processed ${source.filename}`,
-      JSON.stringify({ documentId, chunks: chunkRows.length, docType }),
-    ]
-  );
 
   return {
     summary,

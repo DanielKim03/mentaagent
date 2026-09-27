@@ -4,7 +4,6 @@ import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import { randomUUID } from "node:crypto";
-import * as Sentry from "@sentry/node";
 import IORedis from "ioredis";
 import { env } from "./env.js";
 import { pool } from "./db/client.js";
@@ -72,14 +71,6 @@ export async function buildApp() {
     timeWindow: "1 minute",
     redis: rateLimitRedis,
     skipOnError: true,
-    // Per-user, not per-workspace: one user's burst must not 429 teammates.
-    keyGenerator: (req) => {
-      const user = req.headers["x-user-id"];
-      if (typeof user === "string" && user.length > 0) return `user:${user}`;
-      const ws = req.headers["x-workspace-id"];
-      if (typeof ws === "string" && ws.length > 0) return `ws:${ws}`;
-      return req.ip;
-    },
   });
 
   await app.register(multipart, {
@@ -106,10 +97,6 @@ export async function buildApp() {
     }
     reply.send(err);
   });
-
-  if (env.SENTRY_DSN) {
-    Sentry.setupFastifyErrorHandler(app);
-  }
 
   await app.register(settingsRoutes);
   await app.register(sessionRoutes);

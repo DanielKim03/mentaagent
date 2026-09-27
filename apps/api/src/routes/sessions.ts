@@ -42,9 +42,9 @@ export async function sessionRoutes(app: FastifyInstance) {
   // Create a chat session.
   app.post("/api/sessions", async (req) => {
     const { rows } = await pool.query<{ id: string }>(
-      `INSERT INTO agent_sessions (workspace_id, created_by, kind)
-       VALUES ($1, $2, 'chat') RETURNING id`,
-      [req.workspaceId, req.userId]
+      `INSERT INTO agent_sessions (workspace_id, kind)
+       VALUES ($1, 'chat') RETURNING id`,
+      [req.workspaceId]
     );
     return { session_id: rows[0].id };
   });
@@ -119,42 +119,12 @@ export async function sessionRoutes(app: FastifyInstance) {
         return reply.code(409).send({ error: "the analyst is still working on the previous message" });
       }
 
-      // Free-tier question allowance. NULL = unlimited (paid / grandfathered /
-      // dev); > 0 = decrement and proceed; 0 = blocked. Atomic so concurrent
-      // sends can't over-spend. Refunded if the run fails (see handleAgentJob)
-      // or never enqueues.
-      const { rows: quota } = await pool.query<{ ok: boolean }>(
-        `UPDATE workspaces
-            SET question_quota = CASE
-                  WHEN question_quota IS NULL THEN NULL
-                  ELSE question_quota - 1 END
-          WHERE id = $1 AND (question_quota IS NULL OR question_quota > 0)
-          RETURNING TRUE AS ok`,
-        [req.workspaceId]
-      );
-      if (quota.length === 0) {
-        return reply
-          .code(402)
-          .send({ error: "question quota exhausted" });
-      }
-
-      let runId: string;
-      try {
-        ({ runId } = await createAgentRun({
-          workspaceId: req.workspaceId,
-          kind: "chat",
-          sessionId: req.params.id,
-          userMessage: parsed.data.message,
-        }));
-      } catch (err) {
-        // Couldn't create/enqueue the run — give the question back.
-        await pool.query(
-          `UPDATE workspaces SET question_quota = question_quota + 1
-            WHERE id = $1 AND question_quota IS NOT NULL`,
-          [req.workspaceId]
-        );
-        throw err;
-      }
+      const { runId } = await createAgentRun({
+        workspaceId: req.workspaceId,
+        kind: "chat",
+        sessionId: req.params.id,
+        userMessage: parsed.data.message,
+      });
       return reply.code(202).send({ run_id: runId });
     }
   );

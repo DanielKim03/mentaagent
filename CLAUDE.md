@@ -3,14 +3,11 @@
 Self-hosted AI business analyst: the owner uploads business files and an
 agent tells them what the business is lacking and what to improve — with
 memory and skills so it gets better at advising the business over time.
-Open source (Apache 2.0). Started as a subscription SaaS; accounts and billing
-were removed for the open release.
+Open source (Apache 2.0).
 
 **Single-user, local.** No login, no accounts, no plans. Every request and job
-uses the one seeded workspace (`DEFAULT_WORKSPACE_ID`, migration 003).
+uses the one workspace seeded in `001_init.sql` (`DEFAULT_WORKSPACE_ID`).
 docker compose binds published ports to 127.0.0.1 because there is no auth.
-The `users`/`memberships` tables and the workspace quota columns still exist
-in the schema but are unused (quotas are NULL = unlimited, migration 009).
 
 ## Services
 
@@ -22,7 +19,7 @@ pnpm monorepo, three deployable processes + Postgres 16 (pgvector) + Redis:
   `/chat`.
 - **api** (`apps/api/src/server.ts`) — Fastify on :3001, private network.
   `lib/auth.ts` checks the shared secret when set and pins every request to
-  the default workspace with the admin role.
+  the default workspace.
 - **worker** (`apps/api/src/worker.ts`) — BullMQ consumers: `ingest`
   (parse→chunk→embed→summarize), `agent` (runs the loop), `maintenance`
   repeatable tick every 15 min (idle-session reflect sweep, weekly monitor
@@ -39,7 +36,7 @@ generated on first run. The model key is entered on the web Settings page
 
 ```bash
 docker compose up -d postgres redis   # postgres :5433, redis :6380 (offset ports)
-cp .env.example .env           # blank vars are fine: treated as unset, dev AUTH_SECRET fallback
+cp .env.example .env           # blank vars are fine: treated as unset
 pnpm install
 pnpm --filter api migrate
 pnpm --filter api dev          # API :3001
@@ -60,15 +57,14 @@ Qwen3-VL vision). **Config comes from `services/llm/settings.ts`**: the
 one-row `llm_settings` table (written by the web Settings page) over env
 vars; API and worker re-read it every 5 s, and clients are rebuilt when the
 URL or key changes. Tests (`NODE_ENV=test`) ignore the table so they never
-pick up a real key. Fallback
-mode `LLM_TOOL_MODE=hermes-xml` for hosts without native tool calling
-(schemas in system prompt, `<tool_call>` parsed from text). Embeddings:
-bge-m3 on DeepInfra (separate key). Vision (image ingest): Qwen3-VL on
-DeepInfra via `callVision` (`VISION_*` env; key/URL fall back to the
-embeddings provider). **Budget discipline (load-bearing, copied from
-Mentapath): every chat/embed/vision call atomically pre-charges `llm_usage`
-under a per-workspace advisory lock, reconciles to real tokens after;
-per-workspace billing-period cap + instance daily cap → HTTP 402.**
+pick up a real key. Fallback mode `LLM_TOOL_MODE=hermes-xml` for hosts
+without native tool calling (schemas in system prompt, `<tool_call>` parsed
+from text). The embeddings key falls back to the chat key when both URLs are
+on the same host; vision falls back to the embeddings provider.
+**Budget discipline (load-bearing):** every chat/embed/vision call atomically
+pre-charges `llm_usage` under an advisory lock and reconciles to real tokens
+after. That feeds the per-run cost caps (`RUN_POLICY`) and the optional daily
+cap `LLM_DAILY_USD_CAP` (→ HTTP 402).
 
 ## Agent runtime (`apps/api/src/services/agent/`)
 
@@ -80,9 +76,9 @@ per-workspace billing-period cap + instance daily cap → HTTP 402.**
   (`agent-cancel:{runId}`), consecutive-tool-failure nudge (2) / abort (4).
   Tool errors are returned to the model as tool results (self-correction).
 - Tools self-register on import (`tools/index.ts`); per-kind whitelists in
-  `RUN_POLICY`. All read-only over tenant data except `create_alert` (carries
-  Mentapath's quality gates: severity floor, pg_trgm dedup vs open alerts,
-  max 5/run) and `write_report_section` (validates section_key + citations).
+  `RUN_POLICY`. All read-only over the data except `create_alert` (quality
+  gates: severity floor, pg_trgm dedup vs open and dismissed alerts, max
+  5/run, open backlog capped at 15) and `write_report_section` (validates section_key + citations).
 - `workspaceId` flows from job data, never from model output.
 - Streaming: worker publishes typed events to Redis `agent-events` channel;
   API bridges to SSE (`/api/runs/:id/events`); reconnect = fetch run from DB.
@@ -97,7 +93,7 @@ per-workspace billing-period cap + instance daily cap → HTTP 402.**
   User-visible/editable at `/memory`.
 - **Skills** (`services/skills/store.ts`): markdown playbooks, instructions
   only (never code). Global library seeded from repo `skills/*.md` at worker
-  boot — editing those files + redeploy updates every customer. Per-workspace
+  boot. Per-workspace
   learned skills arrive via `propose_skill` (reflect runs only) → owner
   approval queue at `/skills`. Catalog (name+description) in prompt; full
   body via `use_skill` (telemetry: use_count).
@@ -118,28 +114,20 @@ Resume after failure re-runs only pending sections.
 
 ## Conventions
 
-- Mentapath conventions carry over: graceful degradation when keys are
-  missing (no embed key → FTS-only retrieval; no Resend → no emails; no
-  vision/embeddings key → image uploads rejected at the door), quota refund on
-  final ingest failure, re-upload of same-named file replaces the old source,
-  byte-stable prompts, document content wrapped in `<document>` markers and
-  treated as untrusted data (image transcriptions included — the VLM is told to
-  ignore instructions inside the image).
+- Graceful degradation when keys are missing (no embed key → FTS-only
+  retrieval; no vision/embeddings key → image uploads rejected at the door),
+  re-upload of same-named file replaces the old source, byte-stable prompts,
+  document content wrapped in `<document>` markers and treated as untrusted
+  data (image transcriptions included — the VLM is told to ignore
+  instructions inside the image).
 - Tests: DB-backed vitest in `apps/api/test/`, random-UUID workspaces,
   cascade cleanup in `afterAll`, stub provider — must never call paid LLMs.
 - Migrations: plain SQL in `apps/api/src/db/migrations/`, applied in
-  filename order by `migrate.ts`.
+  filename order by `migrate.ts`. `001_init.sql` is the whole schema; add
+  changes as new numbered files.
 
-## Not built yet (per the plan)
+## Not built yet
 
-Resend periodic digest emails (report emails + imminent due-date alert emails
-ARE built — `services/report/email.ts`, `services/notify/imminent.ts`, sent from
-the worker), connectors (schema + `services/connectors/` seam exist; Google
-Drive Picker first), skill curator job, pre-compaction memory flush, report PDF
-export beyond print CSS, the 30-case Hermes tool-calling eval. In-app email
-opt-out UI (the `users.alert_emails` column exists, defaults TRUE, but isn't
-user-editable yet).
-
-Report emails and imminent-alert emails exist in code but have no recipients
-since accounts were removed. Reports are generated automatically (weekly and
-monthly) for any workspace with documents; there is no manual trigger.
+Connectors (e.g. Google Drive), a manual "generate report" button (reports
+only run on the weekly/monthly schedule), report PDF export beyond print CSS,
+skill curator job, pre-compaction memory flush, a tool-calling eval set.

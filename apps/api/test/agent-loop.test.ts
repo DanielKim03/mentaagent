@@ -5,7 +5,7 @@ import { setStubScript } from "../src/services/agent/provider.js";
 import { runAgentLoop } from "../src/services/agent/loop.js";
 import "../src/services/agent/tools/index.js";
 
-// DB-backed loop test (Mentapath convention: random-UUID workspace, cascade
+// DB-backed loop test (random-UUID workspace, cascade
 // cleanup, never calls a paid LLM — the stub provider is scripted per test).
 
 const ws = randomUUID();
