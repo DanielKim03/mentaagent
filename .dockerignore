@@ -7,14 +7,12 @@
 .git
 .gitignore
 
-# Env files at ANY depth — including the dev-only apps/web/.env.local symlink,
-# which would otherwise dangle in the image and break `next build`.
+# Env files at any depth: keys must never be baked into an image.
 .env
 .env.*
 **/.env
 **/.env.local
 **/.env.*.local
-!.env.example
 
 data
 samples

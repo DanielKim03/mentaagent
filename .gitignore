@@ -8,8 +8,8 @@ build/
 .env.local
 .env.*.local
 
-data/*/
-!data/.gitkeep
+# Uploaded files when running outside Docker (STORAGE_PATH)
+data/
 
 *.log
 .DS_Store

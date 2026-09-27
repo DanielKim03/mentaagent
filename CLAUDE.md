@@ -36,7 +36,6 @@ generated on first run. The model key is entered on the web Settings page
 
 ```bash
 docker compose up -d postgres redis   # postgres :5433, redis :6380 (offset ports)
-cp .env.example .env           # blank vars are fine: treated as unset
 pnpm install
 pnpm --filter api migrate
 pnpm --filter api dev          # API :3001

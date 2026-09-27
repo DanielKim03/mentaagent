@@ -71,14 +71,19 @@ uploaded files and settings are kept in Docker volumes between restarts.
   model, image uploads are refused.
 - **Reports run on their own**, weekly and monthly once you have uploaded
   files. With a real model each one costs money on your provider's account.
-  `LLM_DAILY_USD_CAP` in `.env` sets a daily ceiling.
-- **Prefer config files?** Everything on the settings page can also be set in a
-  `.env` file next to `docker-compose.yml`; see
-  [`.env.example`](.env.example). Values saved in the app win over `.env`.
-- **Your model host has no native tool calling?** Choose "Hermes XML" under
-  Advanced: tool schemas go in the prompt and calls are parsed from the text.
-- **Serving it on another address?** Set `WEB_ORIGIN` in `.env` **before** the
-  first build.
+  `LLM_DAILY_USD_CAP` (below) sets a daily ceiling.
+
+### Optional settings
+
+Everything works without these. To use one, create a file named `.env` next to
+`docker-compose.yml`, put the line in it, and restart with
+`docker compose up -d`.
+
+| Setting | What it does |
+|---|---|
+| `LLM_DAILY_USD_CAP=5` | Stops model calls for the day once spending reaches $5. Default: no cap. |
+| `WEB_ORIGIN=https://your.domain` | The address the app is served on, if not `http://localhost:3000`. It is built into the app, so rebuild after changing it: `docker compose up -d --build`. |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `AGENT_MODEL`, `HEAVY_MODEL`, `LLM_TOOL_MODE`, `EMBEDDINGS_API_KEY`, `EMBEDDINGS_BASE_URL`, `EMBEDDINGS_MODEL`, `VISION_MODEL` | The same model settings as the Settings page, for people who prefer a file. Values saved on the page win. |
 
 ## What it does, in detail
 

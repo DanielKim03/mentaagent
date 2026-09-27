@@ -10,7 +10,11 @@ const isProd = process.env.NODE_ENV === "production";
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  // Defaults match `docker compose up -d postgres redis` for local dev.
+  DATABASE_URL: z
+    .string()
+    .min(1)
+    .default("postgresql://mentaagent:mentaagent@localhost:5433/mentaagent"),
   REDIS_URL: z.string().min(1).default("redis://localhost:6380"),
   PORT: z.coerce.number().int().positive().default(3001),
   PGSSL: z.enum(["require"]).optional(),
@@ -70,7 +74,7 @@ const schema = z.object({
   INTERNAL_API_SECRET: z.string().min(32).optional(),
 });
 
-// Treat empty-string vars as unset so a copied .env.example (with blank
+// Treat empty-string vars as unset so a .env with blank
 // optional values) validates — zod's .optional() doesn't cover "".
 const cleanedEnv = Object.fromEntries(
   Object.entries(process.env).filter(([, v]) => v !== "")
