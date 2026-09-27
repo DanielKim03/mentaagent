@@ -87,8 +87,10 @@ cap `LLM_DAILY_USD_CAP` (→ HTTP 402).
 - **Memory** (`services/memory/store.ts`): 4 categories (business_facts,
   owner_preferences, advisor_notes, open_loops) with HARD char budgets —
   over-budget writes error with "consolidate first". Injected into every
-  system prompt. Written only via the `remember` tool from conversation-
-  derived runs — never from document text (prompt-injection firewall).
+  system prompt. Written only via the `remember` tool, which chat, monitor,
+  reflect and consolidate runs have. Chat and monitor runs also read
+  documents, so the protection against a poisoned file is the `<document>`
+  markers and prompt, not structure.
   User-visible/editable at `/memory`.
 - **Skills** (`services/skills/store.ts`): markdown playbooks, instructions
   only (never code). Global library seeded from repo `skills/*.md` at worker
