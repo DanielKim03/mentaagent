@@ -29,6 +29,7 @@ CREATE TABLE workspaces (
 -- text: the database is on the owner's own machine.
 CREATE TABLE llm_settings (
   id                  BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+  provider            TEXT, -- preset picked in the UI (display only)
   llm_base_url        TEXT,
   llm_api_key         TEXT,
   agent_model         TEXT,
@@ -37,6 +38,7 @@ CREATE TABLE llm_settings (
   embeddings_base_url TEXT,
   embeddings_api_key  TEXT,
   embeddings_model    TEXT,
+  vision_base_url     TEXT,
   vision_model        TEXT,
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -56,7 +56,14 @@ Qwen3-VL vision). **Config comes from `services/llm/settings.ts`**: the
 one-row `llm_settings` table (written by the web Settings page) over env
 vars; API and worker re-read it every 5 s, and clients are rebuilt when the
 URL or key changes. Tests (`NODE_ENV=test`) ignore the table so they never
-pick up a real key. Fallback mode `LLM_TOOL_MODE=hermes-xml` for hosts
+pick up a real key. Provider presets for the UI are in
+`apps/web/lib/providers.ts`. Key routing (tested in `test/llm-settings.test.ts`):
+a key is reused only for endpoints on the same host; local URLs (Ollama,
+LM Studio) get a placeholder key; DeepInfra's default embeddings/vision model
+names apply only on DeepInfra, elsewhere blank means off. Embeddings must be
+1024-dim; `text-embedding-3*` and `gemini-embedding*` are asked for 1024 via
+`dimensions`, anything else of the wrong size errors and search falls back to
+FTS. Fallback mode `LLM_TOOL_MODE=hermes-xml` for hosts
 without native tool calling (schemas in system prompt, `<tool_call>` parsed
 from text). The embeddings key falls back to the chat key when both URLs are
 on the same host; vision falls back to the embeddings provider.

@@ -13,12 +13,21 @@ export default function TestConnectionButton() {
     setState({ kind: "testing" });
     try {
       const res = await fetch("/api/proxy/api/settings/llm/test", { method: "POST" });
-      const body = (await res.json()) as { ok: boolean; model?: string; error?: string };
-      setState(
-        body.ok
-          ? { kind: "ok", text: `Connected to ${body.model}.` }
-          : { kind: "error", text: body.error ?? "The test failed." }
-      );
+      const body = (await res.json()) as {
+        ok: boolean;
+        model?: string;
+        error?: string;
+        embeddings?: { ok: boolean; model: string; error?: string };
+      };
+      const chat = body.ok
+        ? `Chat works (${body.model}).`
+        : `Chat failed: ${body.error ?? "unknown error"}`;
+      const emb = !body.embeddings
+        ? " Search: keywords only."
+        : body.embeddings.ok
+          ? ` Search works (${body.embeddings.model}).`
+          : ` Search embeddings failed: ${body.embeddings.error}`;
+      setState({ kind: body.ok && (!body.embeddings || body.embeddings.ok) ? "ok" : "error", text: chat + emb });
     } catch {
       setState({ kind: "error", text: "Could not reach the server." });
     }

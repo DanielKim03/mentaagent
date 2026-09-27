@@ -71,6 +71,10 @@ services:
     env_file:
       - path: .env
         required: false
+    # Reach a model server running on this computer (Ollama, LM Studio) at
+    # http://host.docker.internal:<port>.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       <<: *app-env
       PORT: "3001"
@@ -105,6 +109,10 @@ services:
     env_file:
       - path: .env
         required: false
+    # Reach a model server running on this computer (Ollama, LM Studio) at
+    # http://host.docker.internal:<port>.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       <<: *app-env
     command:
@@ -130,6 +138,10 @@ services:
     env_file:
       - path: .env
         required: false
+    # Reach a model server running on this computer (Ollama, LM Studio) at
+    # http://host.docker.internal:<port>.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       <<: *app-env
       PORT: "3000"

@@ -451,6 +451,10 @@ export async function callLLMStreaming(args: {
 // against the (possibly different) embeddings provider. Embedding spend is
 // ~1% of chat spend but it still counts toward the caps — a runaway
 // backfill must hit the same wall.
+// chunks.embedding is vector(1024) (see 001_init.sql).
+export const EMBEDDING_DIM = 1024;
+const ADJUSTABLE_DIM_MODELS = /text-embedding-3|gemini-embedding/;
+
 export async function callEmbeddings(args: {
   workspaceId: string;
   input: string[];
@@ -477,7 +481,14 @@ export async function callEmbeddings(args: {
   let res: OpenAI.Embeddings.CreateEmbeddingResponse;
   try {
     res = await client.embeddings.create(
-      { model, input: args.input, encoding_format: "float" },
+      {
+        model,
+        input: args.input,
+        encoding_format: "float",
+        // Models that can shorten their vectors are asked for the size the
+        // chunks.embedding column holds; others must already produce it.
+        ...(ADJUSTABLE_DIM_MODELS.test(model) ? { dimensions: EMBEDDING_DIM } : {}),
+      },
       { timeout: 60_000 }
     );
   } catch (err) {
@@ -491,6 +502,13 @@ export async function callEmbeddings(args: {
         // eslint-disable-next-line no-console
         console.error("[llm] embed usage reconcile failed:", err);
       }
+    );
+  }
+
+  const dim = res.data[0]?.embedding.length;
+  if (dim !== undefined && dim !== EMBEDDING_DIM) {
+    throw new Error(
+      `embeddings model "${model}" returns ${dim}-dimension vectors; MentaAgent needs ${EMBEDDING_DIM} (e.g. BAAI/bge-m3, mistral-embed, text-embedding-3-small)`
     );
   }
 

@@ -40,11 +40,10 @@ docker compose up
 
 Open http://localhost:3000. That's it: no account to create.
 
-1. **Add a model key.** Open **Model & API key** in the sidebar, paste a key
-   and press Save. It takes effect within seconds, no restart. The defaults
-   use [DeepInfra](https://deepinfra.com/dash/api_keys), where one key covers
-   chat, embeddings and image reading. Any other OpenAI-compatible provider
-   works too; change the URL and model names on the same page.
+1. **Add a model key.** Open **Model & API key** in the sidebar, pick your
+   provider, paste your own key and press Save. It takes effect within
+   seconds, no restart. "Load models" lists the models your provider offers,
+   and "Test saved settings" checks the key before you rely on it.
 2. **Tell it about the business** on the **Profile** page.
 3. **Upload files** on the **Data** page. To try it without your own data, use
    [`samples/`](samples/): a fictional catering company's revenue, clients,
@@ -66,6 +65,19 @@ uploaded files and settings are kept in Docker volumes between restarts.
   the app on `127.0.0.1` only. To reach it from another device, put it behind
   something that does authentication (a VPN such as Tailscale, or a reverse
   proxy with a password). Do not simply open the port.
+- **Any provider, your own key.** The page has presets for DeepInfra, OpenAI,
+  Anthropic (Claude), Google Gemini, OpenRouter, Groq, Mistral, DeepSeek,
+  Together and Ollama, plus any other OpenAI-compatible server. Only DeepInfra
+  has been tested end to end with a real key; the others follow each
+  provider's OpenAI-compatibility documentation, and the test button tells
+  you quickly if something is off. The chat model must support tool calling.
+- **Free and offline with Ollama.** Pick "Ollama", no key needed; the app
+  reaches it on your computer at `host.docker.internal:11434`.
+- **Search and photos depend on the provider.** Semantic search needs an
+  embeddings model that returns 1024-dimension vectors (DeepInfra, OpenAI,
+  Gemini, Mistral, Together and Ollama have one). Anthropic, Groq, DeepSeek and
+  OpenRouter don't, so search falls back to keywords; you can add a separate
+  embeddings provider under Advanced.
 - **Missing keys turn features off rather than breaking the app.** With no
   embeddings key, search falls back to Postgres full-text. With no vision
   model, image uploads are refused.

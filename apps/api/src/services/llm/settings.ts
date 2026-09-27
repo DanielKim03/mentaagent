@@ -1,11 +1,16 @@
 import { env } from "../../env.js";
 import { pool } from "../../db/client.js";
 
-// Model provider settings. The owner enters them on the web Settings page
-// (stored in the one-row llm_settings table); anything left blank there falls
-// back to the environment (.env). The API and the worker each keep a copy in
-// memory and re-read the row every few seconds, so a key saved in the browser
-// reaches the worker without a restart.
+// Model provider settings. The owner picks a provider and pastes a key on the
+// web Settings page (stored in the one-row llm_settings table); anything left
+// blank there falls back to the environment (.env). The API and the worker
+// each keep a copy in memory and re-read the row every few seconds, so a key
+// saved in the browser reaches the worker without a restart.
+//
+// Three endpoints, each any OpenAI-compatible host: chat (the agent),
+// embeddings (semantic search) and vision (reading uploaded photos). One key
+// is reused across them only when they point at the same host, so a key is
+// never sent to a provider it was not issued by.
 
 export type LlmConfig = {
   baseUrl: string;
@@ -22,6 +27,7 @@ export type LlmConfig = {
 };
 
 export type LlmSettingsRow = {
+  provider: string | null;
   llm_base_url: string | null;
   llm_api_key: string | null;
   agent_model: string | null;
@@ -30,6 +36,7 @@ export type LlmSettingsRow = {
   embeddings_base_url: string | null;
   embeddings_api_key: string | null;
   embeddings_model: string | null;
+  vision_base_url: string | null;
   vision_model: string | null;
 };
 
@@ -38,40 +45,84 @@ const blank = (s: string | null | undefined) => {
   return t ? t : undefined;
 };
 
+function host(url: string): string | null {
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
+// A model server on this machine or the local network (Ollama, LM Studio,
+// vLLM) usually needs no key. Such URLs get a placeholder key so the app
+// calls them instead of falling back to the stub model.
+export function isLocalUrl(url: string): boolean {
+  try {
+    const h = new URL(url).hostname;
+    return (
+      h === "localhost" ||
+      h === "host.docker.internal" ||
+      h.endsWith(".local") ||
+      /^127\./.test(h) ||
+      /^10\./.test(h) ||
+      /^192\.168\./.test(h) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function resolveLlmConfig(row: Partial<LlmSettingsRow> | null): LlmConfig {
   const baseUrl = blank(row?.llm_base_url) ?? env.LLM_BASE_URL;
-  const apiKey = blank(row?.llm_api_key) ?? blank(env.LLM_API_KEY);
+  const apiKey =
+    blank(row?.llm_api_key) ??
+    blank(env.LLM_API_KEY) ??
+    (isLocalUrl(baseUrl) ? "local" : undefined);
+
   const embeddingsBaseUrl = blank(row?.embeddings_base_url) ?? env.EMBEDDINGS_BASE_URL;
-  // One key often covers chat and embeddings (DeepInfra does both). Reuse the
-  // chat key only when both point at the same host, so a key is never sent to
-  // a provider it was not issued by.
   const embeddingsApiKey =
     blank(row?.embeddings_api_key) ??
     blank(env.EMBEDDINGS_API_KEY) ??
-    (sameHost(embeddingsBaseUrl, baseUrl) ? apiKey : undefined);
+    (host(embeddingsBaseUrl) === host(baseUrl) ? apiKey : undefined) ??
+    (isLocalUrl(embeddingsBaseUrl) ? "local" : undefined);
+
+  const visionBaseUrl =
+    blank(row?.vision_base_url) ?? blank(env.VISION_BASE_URL) ?? embeddingsBaseUrl;
+  const visionApiKey =
+    blank(env.VISION_API_KEY) ??
+    (host(visionBaseUrl) === host(baseUrl)
+      ? apiKey
+      : host(visionBaseUrl) === host(embeddingsBaseUrl)
+        ? embeddingsApiKey
+        : isLocalUrl(visionBaseUrl)
+          ? "local"
+          : undefined);
+
+  // The default embeddings/vision model names (bge-m3, Qwen3-VL) are
+  // DeepInfra's. On any other host a blank model means the feature is off,
+  // rather than asking that provider for a model it doesn't have.
+  const defaultHost = host(env.EMBEDDINGS_BASE_URL);
+  const embeddingsModel =
+    blank(row?.embeddings_model) ??
+    (host(embeddingsBaseUrl) === defaultHost ? env.EMBEDDINGS_MODEL : undefined);
+  const visionModel =
+    blank(row?.vision_model) ??
+    (host(visionBaseUrl) === defaultHost ? env.VISION_MODEL : undefined);
+
   return {
     baseUrl,
     apiKey,
     agentModel: blank(row?.agent_model) ?? env.AGENT_MODEL,
-    heavyModel: blank(row?.heavy_model) ?? env.HEAVY_MODEL,
+    heavyModel: blank(row?.heavy_model) ?? blank(row?.agent_model) ?? env.HEAVY_MODEL,
     toolMode: row?.llm_tool_mode ?? env.LLM_TOOL_MODE,
     embeddingsBaseUrl,
-    embeddingsApiKey,
-    embeddingsModel: blank(row?.embeddings_model) ?? env.EMBEDDINGS_MODEL,
-    // Vision falls back to the embeddings provider (Qwen3-VL and bge-m3 live
-    // on the same DeepInfra account).
-    visionBaseUrl: env.VISION_BASE_URL ?? embeddingsBaseUrl,
-    visionApiKey: blank(env.VISION_API_KEY) ?? embeddingsApiKey,
-    visionModel: blank(row?.vision_model) ?? env.VISION_MODEL,
+    embeddingsApiKey: embeddingsModel ? embeddingsApiKey : undefined,
+    embeddingsModel: embeddingsModel ?? "",
+    visionBaseUrl,
+    visionApiKey: visionModel ? visionApiKey : undefined,
+    visionModel: visionModel ?? "",
   };
-}
-
-function sameHost(a: string, b: string): boolean {
-  try {
-    return new URL(a).host === new URL(b).host;
-  } catch {
-    return false;
-  }
 }
 
 let current: LlmConfig = resolveLlmConfig(null);
@@ -82,8 +133,9 @@ export function llmConfig(): LlmConfig {
 
 export async function readLlmSettingsRow(): Promise<LlmSettingsRow | null> {
   const { rows } = await pool.query<LlmSettingsRow>(
-    `SELECT llm_base_url, llm_api_key, agent_model, heavy_model, llm_tool_mode,
-            embeddings_base_url, embeddings_api_key, embeddings_model, vision_model
+    `SELECT provider, llm_base_url, llm_api_key, agent_model, heavy_model, llm_tool_mode,
+            embeddings_base_url, embeddings_api_key, embeddings_model,
+            vision_base_url, vision_model
        FROM llm_settings WHERE id`
   );
   return rows[0] ?? null;
