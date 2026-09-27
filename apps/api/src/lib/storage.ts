@@ -8,6 +8,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { env } from "../env.js";
+import { llmConfig } from "../services/llm/settings.js";
 
 // ---------------------------------------------------------------------------
 // Object storage (S3 / Cloudflare R2) for uploaded SOURCE files.
@@ -143,7 +144,7 @@ const IMAGE_UPLOAD_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
 
 /** True when image ingest is available (a vision OR embeddings key is set). */
 export function isImageIngestEnabled(): boolean {
-  return Boolean(env.VISION_API_KEY || env.EMBEDDINGS_API_KEY);
+  return Boolean(llmConfig().visionApiKey);
 }
 
 /** Extensions accepted at upload right now, given the current configuration. */

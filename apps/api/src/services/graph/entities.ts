@@ -1,6 +1,7 @@
 import { env } from "../../env.js";
 import { pool } from "../../db/client.js";
 import { callLLM, getChatClient } from "../llm/client.js";
+import { llmConfig } from "../llm/settings.js";
 
 // Entity extraction + graph queries. One cheap LLM call pulls the named
 // things out of a document (customers, vendors, products, people, contracts,
@@ -35,7 +36,7 @@ async function extractEntities(
       workspaceId,
       operation: "summarize",
       params: {
-        model: env.AGENT_MODEL,
+        model: llmConfig().agentModel,
         max_tokens: 1200,
         messages: [
           {

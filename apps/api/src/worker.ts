@@ -32,6 +32,7 @@ import {
 } from "./services/monitor/schedule.js";
 import { runImminentAlertSweep } from "./services/notify/imminent.js";
 import { seedGlobalSkills } from "./services/skills/store.js";
+import { llmConfig, refreshLlmConfig, startLlmConfigRefresh } from "./services/llm/settings.js";
 
 // The worker process: ingest jobs, agent runs, and the maintenance tick.
 // Deployed as its own service (separate from the API) — events cross back
@@ -144,13 +145,14 @@ const seeded = await seedGlobalSkills();
 if (seeded > 0) console.log(`[skills] seeded ${seeded} global skills`);
 await ensureMaintenanceSchedule();
 console.log("[worker] started: ingest + agent + maintenance");
-// Diagnostic fingerprint (no secret leaked): confirms which LLM key + endpoint
-// the running build actually loaded. Remove once the LLM is confirmed working.
+// Model settings saved in the web app reach this process within seconds.
+await refreshLlmConfig();
+startLlmConfigRefresh();
 {
-  const k = env.LLM_API_KEY ?? "";
+  const c = llmConfig();
   console.log(
-    `[llm] base=${env.LLM_BASE_URL} model=${env.AGENT_MODEL} ` +
-      `key=${k ? `len:${k.length} ${k.slice(0, 4)}…${k.slice(-4)}` : "<unset → stub>"}`
+    `[llm] base=${c.baseUrl} model=${c.agentModel} ` +
+      `key=${c.apiKey ? "set" : "<unset → stub>"}`
   );
   // Host only (no credentials): confirms DB/Redis are on the internal Railway
   // network (…railway.internal) vs the slower public proxy (…proxy.rlwy.net).

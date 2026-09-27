@@ -32,7 +32,7 @@ export default function UploadForm() {
       body.append("file", file);
       const res = await fetch("/api/proxy/api/sources", { method: "POST", body });
       if (res.status === 402) {
-        setItem(key, { phase: "failed", message: "Upload quota exhausted — upgrade your plan." });
+        setItem(key, { phase: "failed", message: "Upload quota exhausted." });
         return;
       }
       if (!res.ok) {

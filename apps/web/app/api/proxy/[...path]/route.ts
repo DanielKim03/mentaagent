@@ -1,10 +1,9 @@
-import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-// Generic authenticated proxy: browser → /api/proxy/* → private API. Injects
-// the internal bearer secret plus server-derived x-user-id / x-workspace-id
-// from the session — the API re-verifies the membership at its trust
-// boundary. Streams response bodies (SSE included) straight through.
+// Proxy: browser → /api/proxy/* → private API, adding the internal bearer
+// secret so only this server can call the API. There are no accounts: the app
+// runs locally for one person. Streams response bodies (SSE included)
+// straight through.
 
 const API_URL = (process.env.API_INTERNAL_URL ?? "http://localhost:3001").replace(
   /\/+$/,
@@ -28,17 +27,6 @@ async function forward(req: NextRequest, path: string[]) {
     );
   }
 
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!session.workspaceId) {
-    return NextResponse.json(
-      { error: "no workspace assigned to user" },
-      { status: 403 }
-    );
-  }
-
   const target = `${API_URL}/${path.join("/")}${req.nextUrl.search}`;
 
   const headers = new Headers();
@@ -46,9 +34,6 @@ async function forward(req: NextRequest, path: string[]) {
     if (!HOP_BY_HOP_REQ.has(key.toLowerCase())) headers.set(key, value);
   });
   if (SECRET) headers.set("authorization", `Bearer ${SECRET}`);
-  headers.set("x-user-id", session.user.id);
-  headers.set("x-user-email", session.user.email);
-  headers.set("x-workspace-id", session.workspaceId);
 
   const init: RequestInit & { duplex?: "half" } = {
     method: req.method,

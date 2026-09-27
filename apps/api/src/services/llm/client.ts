@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { PoolClient } from "pg";
 import { env } from "../../env.js";
 import { pool } from "../../db/client.js";
+import { llmConfig } from "./settings.js";
 
 // Provider-agnostic OpenAI-compatible clients. Two endpoints:
 //   - chat (the agent brain): Nebius Token Factory serving Nous Hermes 4
@@ -14,71 +15,51 @@ import { pool } from "../../db/client.js";
 //   - Fallback NousResearch/Hermes-3-Llama-3.1-405B on DeepInfra ($1/$1)
 //     via the hermes-xml tool mode (no native tools param there).
 
-let chatCached: OpenAI | null | undefined = undefined;
-let embedCached: OpenAI | null | undefined = undefined;
-let visionCached: OpenAI | null | undefined = undefined;
+// Clients are cached per (baseURL, key) and rebuilt when the owner changes
+// the settings in the web app.
+type Cached = { sig: string; client: OpenAI | null };
+let chatCached: Cached | undefined;
+let embedCached: Cached | undefined;
+let visionCached: Cached | undefined;
 
-// Returns null when LLM_API_KEY is unset; the agent loop uses the stub
-// provider in that case so the rest of the pipeline can still be exercised
-// end-to-end (dev, tests).
+function cachedClient(
+  slot: Cached | undefined,
+  baseURL: string,
+  apiKey: string | undefined,
+  timeout: number
+): Cached {
+  const sig = `${baseURL}\n${apiKey ?? ""}`;
+  if (slot && slot.sig === sig) return slot;
+  // 1 retry caps latency/cost on 429/5xx; the per-call timeout is the real
+  // ceiling, this default only covers paths that don't set one.
+  return {
+    sig,
+    client: apiKey ? new OpenAI({ apiKey, baseURL, timeout, maxRetries: 1 }) : null,
+  };
+}
+
+// Returns null when no LLM key is set; the agent loop uses the stub provider
+// in that case so the rest of the pipeline can still be exercised end-to-end
+// (dev, tests, a fresh install).
 export function getChatClient(): OpenAI | null {
-  if (chatCached !== undefined) return chatCached;
-  const apiKey = env.LLM_API_KEY;
-  if (!apiKey) {
-    chatCached = null;
-    return null;
-  }
-  // Bound each request: the SDK default is a 10-minute timeout with 2
-  // retries. The per-call timeout in callLLM is the real ceiling; this 300s
-  // default just covers any path that doesn't set one. 1 retry caps
-  // latency/cost on 429/5xx.
-  chatCached = new OpenAI({
-    apiKey,
-    baseURL: env.LLM_BASE_URL,
-    timeout: 300_000,
-    maxRetries: 1,
-  });
-  return chatCached;
+  const c = llmConfig();
+  chatCached = cachedClient(chatCached, c.baseUrl, c.apiKey, 300_000);
+  return chatCached.client;
 }
 
 export function getEmbeddingsClient(): OpenAI | null {
-  if (embedCached !== undefined) return embedCached;
-  const apiKey = env.EMBEDDINGS_API_KEY;
-  if (!apiKey) {
-    embedCached = null;
-    return null;
-  }
-  embedCached = new OpenAI({
-    apiKey,
-    baseURL: env.EMBEDDINGS_BASE_URL,
-    timeout: 60_000,
-    maxRetries: 1,
-  });
-  return embedCached;
+  const c = llmConfig();
+  embedCached = cachedClient(embedCached, c.embeddingsBaseUrl, c.embeddingsApiKey, 60_000);
+  return embedCached.client;
 }
 
-// Vision client for image ingest (a VLM that transcribes/describes uploaded
-// photos). Credentials/URL fall back to the embeddings provider when the
-// dedicated VISION_* vars are unset — Qwen3-VL lives on the same DeepInfra
-// account as bge-m3, so one key covers both. Returns null when NEITHER a
-// vision nor an embeddings key is set; callers (the image parser, the upload
-// gate) treat null as "image ingest disabled".
+// Vision client for image ingest. Returns null when no vision or embeddings
+// key is available; callers (the image parser, the upload gate) treat null as
+// "image ingest disabled".
 export function getVisionClient(): OpenAI | null {
-  if (visionCached !== undefined) return visionCached;
-  const apiKey = env.VISION_API_KEY ?? env.EMBEDDINGS_API_KEY;
-  if (!apiKey) {
-    visionCached = null;
-    return null;
-  }
-  visionCached = new OpenAI({
-    apiKey,
-    baseURL: env.VISION_BASE_URL ?? env.EMBEDDINGS_BASE_URL,
-    // A high-resolution image can take a while to caption; give it room but
-    // keep the per-call ceiling in callVision the real bound.
-    timeout: 180_000,
-    maxRetries: 1,
-  });
-  return visionCached;
+  const c = llmConfig();
+  visionCached = cachedClient(visionCached, c.visionBaseUrl, c.visionApiKey, 180_000);
+  return visionCached.client;
 }
 
 // Pricing in micros (millionths of USD) per million tokens. Reverify at
@@ -517,7 +498,7 @@ export async function callEmbeddings(args: {
       "EMBEDDINGS_API_KEY not set — callEmbeddings requires a real client."
     );
   }
-  const model = env.EMBEDDINGS_MODEL;
+  const model = llmConfig().embeddingsModel;
 
   const estPrompt = Math.ceil(
     args.input.reduce((n, t) => n + t.length, 0) / 4
@@ -582,7 +563,7 @@ export async function callVision(args: {
       "Vision is not configured (no VISION_API_KEY or EMBEDDINGS_API_KEY) — callVision requires a real client."
     );
   }
-  const model = env.VISION_MODEL;
+  const model = llmConfig().visionModel;
   const maxTokens = args.maxTokens ?? 1500;
 
   const reservationId = await reserveBudget({

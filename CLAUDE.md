@@ -1,23 +1,28 @@
 # MentaAgent
 
-Managed AI business analyst SaaS: business owners connect their files and an
+Self-hosted AI business analyst: the owner uploads business files and an
 agent tells them what the business is lacking and what to improve — with
-per-workspace memory and skills so it gets better at advising each business
-over time. Architecture and patterns adapted from Mentapath, the founder's
-earlier production SaaS.
+memory and skills so it gets better at advising the business over time.
+Open source (Apache 2.0). Started as a subscription SaaS; accounts and billing
+were removed for the open release.
+
+**Single-user, local.** No login, no accounts, no plans. Every request and job
+uses the one seeded workspace (`DEFAULT_WORKSPACE_ID`, migration 003).
+docker compose binds published ports to 127.0.0.1 because there is no auth.
+The `users`/`memberships` tables and the workspace quota columns still exist
+in the schema but are unused (quotas are NULL = unlimited, migration 009).
 
 ## Services
 
 pnpm monorepo, three deployable processes + Postgres 16 (pgvector) + Redis:
 
-- **web** (`apps/web`) — Next.js 14 App Router. Owns auth (NextAuth v5:
-  credentials + Google). Browser calls go through `/api/proxy/*` which
-  injects `INTERNAL_API_SECRET` + server-derived `x-user-id`/`x-workspace-id`.
-  Server components use `lib/api.ts` (same headers, direct).
+- **web** (`apps/web`) — Next.js 14 App Router, no auth. Browser calls go
+  through `/api/proxy/*`, which adds the `INTERNAL_API_SECRET` bearer.
+  Server components use `lib/api.ts` (same header, direct). `/` redirects to
+  `/chat`.
 - **api** (`apps/api/src/server.ts`) — Fastify on :3001, private network.
-  Trust boundary: `lib/auth.ts` re-verifies every (user, workspace)
-  membership; never trusts workspace id from the body. Dev fallback (no
-  `INTERNAL_API_SECRET` set): default workspace, admin role.
+  `lib/auth.ts` checks the shared secret when set and pins every request to
+  the default workspace with the admin role.
 - **worker** (`apps/api/src/worker.ts`) — BullMQ consumers: `ingest`
   (parse→chunk→embed→summarize), `agent` (runs the loop), `maintenance`
   repeatable tick every 15 min (idle-session reflect sweep, weekly monitor
@@ -26,8 +31,9 @@ pnpm monorepo, three deployable processes + Postgres 16 (pgvector) + Redis:
 ## Run it (no setup)
 
 `docker compose up` builds and runs everything (postgres, redis, api, worker,
-web) at http://localhost:3000 with zero API keys; sign up to create a
-workspace. Secrets are generated on first run; optional keys come from `.env`.
+web) at http://localhost:3000 with zero API keys. The internal secret is
+generated on first run. The model key is entered on the web Settings page
+(`/settings`) or in `.env`.
 
 ## Local dev
 
@@ -35,7 +41,7 @@ workspace. Secrets are generated on first run; optional keys come from `.env`.
 docker compose up -d postgres redis   # postgres :5433, redis :6380 (offset ports)
 cp .env.example .env           # blank vars are fine: treated as unset, dev AUTH_SECRET fallback
 pnpm install
-pnpm --filter api migrate && pnpm --filter api seed   # dev@example.com / devpassword
+pnpm --filter api migrate
 pnpm --filter api dev          # API :3001
 pnpm --filter api dev:worker   # worker (separate terminal)
 pnpm --filter web dev          # web :3000
@@ -48,8 +54,13 @@ spend. Tests script it via `setStubScript()` in `services/agent/provider.ts`.
 
 ## LLM
 
-`services/llm/client.ts` — OpenAI SDK against any compatible host. Primary:
-Nous Hermes 4 70B/405B on Nebius (`LLM_BASE_URL`, native `tools`). Fallback
+`services/llm/client.ts` — OpenAI SDK against any compatible host. Default:
+DeepSeek V4 Flash/Pro on DeepInfra (one key also serves bge-m3 embeddings and
+Qwen3-VL vision). **Config comes from `services/llm/settings.ts`**: the
+one-row `llm_settings` table (written by the web Settings page) over env
+vars; API and worker re-read it every 5 s, and clients are rebuilt when the
+URL or key changes. Tests (`NODE_ENV=test`) ignore the table so they never
+pick up a real key. Fallback
 mode `LLM_TOOL_MODE=hermes-xml` for hosts without native tool calling
 (schemas in system prompt, `<tool_call>` parsed from text). Embeddings:
 bge-m3 on DeepInfra (separate key). Vision (image ingest): Qwen3-VL on
@@ -129,11 +140,6 @@ export beyond print CSS, the 30-case Hermes tool-calling eval. In-app email
 opt-out UI (the `users.alert_emails` column exists, defaults TRUE, but isn't
 user-editable yet).
 
-Paddle billing is wired (checkout in `lib/billing-actions.ts` → `lib/paddle.ts`,
-webhook at `app/api/paddle/webhook`, plan activation + per-period caps in
-`syncSubscriptionFromPaddle`); it just needs `PADDLE_*` env vars to go live.
-Reports are generated automatically for PAID workspaces only (scheduled sweep,
-no manual trigger); the free tier is interactive-only. Free tier enforces 4
-files + 8 questions (migration 008); `create_alert` dedups against open +
-dismissed alerts and caps the open backlog at 15 (critical overrides). New
-uploads trigger an on-ingest review run; imminent alert deadlines are emailed.
+Report emails and imminent-alert emails exist in code but have no recipients
+since accounts were removed. Reports are generated automatically (weekly and
+monthly) for any workspace with documents; there is no manual trigger.

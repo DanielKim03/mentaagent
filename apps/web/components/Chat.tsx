@@ -251,7 +251,7 @@ export default function Chat({
           ...m,
           content:
             m.content ||
-            "I had to pause — this conversation hit its usage budget. Try again later or upgrade your plan.",
+            "I had to pause — this answer hit its spending cap. Ask me to continue, or try again later.",
           pending: false,
         }));
         finish();
@@ -316,7 +316,7 @@ export default function Chat({
       if (res.status === 402) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         return fail(
-          body?.error ?? "You've reached your plan's usage limit — upgrade to keep asking."
+          body?.error ?? "Spending cap reached (LLM_DAILY_USD_CAP)."
         );
       }
       if (!res.ok) return fail("Could not send the message.");

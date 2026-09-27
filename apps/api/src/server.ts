@@ -14,6 +14,10 @@ if (env.SENTRY_DSN && env.NODE_ENV === "production") {
 import { buildApp } from "./app.js";
 import { pool } from "./db/client.js";
 import { startEventBridge } from "./queue/events.js";
+import { refreshLlmConfig, startLlmConfigRefresh } from "./services/llm/settings.js";
+
+await refreshLlmConfig();
+startLlmConfigRefresh();
 
 const app = await buildApp();
 

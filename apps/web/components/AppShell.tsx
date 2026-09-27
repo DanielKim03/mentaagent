@@ -4,16 +4,17 @@ import { useEffect, useState } from "react";
 import { PanelLeft, PanelLeftClose } from "lucide-react";
 
 // App shell with a collapsible left sidebar. The sidebar content is rendered
-// on the server (it needs the session + a sign-out server action) and passed
-// in as a node; this client wrapper just owns the open/closed state and
-// persists it. The slim top bar holds the toggle (and the brand when the
-// sidebar is hidden).
+// on the server and passed in as a node; this client wrapper just owns the
+// open/closed state and persists it. The slim top bar holds the toggle, the
+// brand when the sidebar is hidden, and an optional one-line notice.
 
 export default function AppShell({
   sidebar,
+  notice,
   children,
 }: {
   sidebar: React.ReactNode;
+  notice?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(true);
@@ -53,6 +54,11 @@ export default function AppShell({
           </button>
           {!open && (
             <span className="text-sm font-semibold tracking-tight">MentaAgent</span>
+          )}
+          {notice && (
+            <div className="min-w-0 flex-1 truncate text-center text-sm text-neutral-600">
+              {notice}
+            </div>
           )}
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>

@@ -48,7 +48,7 @@ export async function sourcesRoutes(app: FastifyInstance) {
       [req.workspaceId]
     );
     if (quota.length === 0) {
-      return reply.code(402).send({ error: "upload quota exhausted — upgrade your plan" });
+      return reply.code(402).send({ error: "upload quota exhausted" });
     }
 
     // Re-upload of a same-named file replaces the old source (and its

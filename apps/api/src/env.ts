@@ -22,10 +22,10 @@ const schema = z.object({
   // trailing space pasted into a host's env var (e.g. Railway, which stores the
   // value literally) would otherwise be sent as part of the bearer token and
   // get rejected with a 401, or break the model name / base URL.
-  LLM_BASE_URL: z.string().trim().url().default("https://api.studio.nebius.com/v1"),
+  LLM_BASE_URL: z.string().trim().url().default("https://api.deepinfra.com/v1/openai"),
   LLM_API_KEY: z.string().trim().optional(),
-  AGENT_MODEL: z.string().trim().default("NousResearch/Hermes-4-70B"),
-  HEAVY_MODEL: z.string().trim().default("NousResearch/Hermes-4-405B"),
+  AGENT_MODEL: z.string().trim().default("deepseek-ai/DeepSeek-V4-Flash"),
+  HEAVY_MODEL: z.string().trim().default("deepseek-ai/DeepSeek-V4-Pro"),
   // "native" = OpenAI tools param (Nebius Hermes 4); "hermes-xml" = schemas
   // in system prompt + <tool_call> parsing (hosts without native tools).
   LLM_TOOL_MODE: z.enum(["native", "hermes-xml"]).default("native"),

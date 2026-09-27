@@ -2,7 +2,8 @@
 # API keys (stub LLM provider). For local development, start only the
 # databases instead: `docker compose up -d postgres redis`.
 #
-# Optional keys (LLM_API_KEY etc.) are read from .env if it exists. Values
+# Add a model API key on the app's Settings page. Keys can also come from .env
+# (LLM_API_KEY etc.), which is read if it exists. Values
 # under `environment:` below win over .env, so a dev .env pointing at
 # localhost does not break the containers.
 
@@ -11,7 +12,6 @@ x-app-env: &app-env
   DATABASE_URL: postgresql://mentaagent:mentaagent@postgres:5432/mentaagent
   REDIS_URL: redis://redis:6379
   WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
-  AUTH_URL: ${WEB_ORIGIN:-http://localhost:3000}
   API_INTERNAL_URL: http://api:3001
   STORAGE_PATH: /data
 
@@ -28,7 +28,7 @@ services:
       POSTGRES_PASSWORD: mentaagent
       POSTGRES_DB: mentaagent
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -40,7 +40,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -49,8 +49,8 @@ services:
       timeout: 5s
       retries: 5
 
-  # Generates AUTH_SECRET and INTERNAL_API_SECRET once and keeps them in a
-  # volume, so sessions survive restarts and nobody has to invent secrets.
+  # Generates INTERNAL_API_SECRET (web -> API) once and keeps it in a volume,
+  # so nobody has to invent a secret.
   secrets:
     image: alpine:3.20
     command:
@@ -60,8 +60,7 @@ services:
         f=/secrets/app.env
         [ -s "$$f" ] && exit 0
         gen() { head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
-        echo "GEN_AUTH_SECRET=$$(gen)" > "$$f"
-        echo "GEN_INTERNAL_API_SECRET=$$(gen)" >> "$$f"
+        echo "GEN_INTERNAL_API_SECRET=$$(gen)" > "$$f"
     volumes:
       - secrets:/secrets
 
@@ -139,11 +138,12 @@ services:
       - -c
       - >-
         . /secrets/app.env &&
-        export AUTH_SECRET="$${AUTH_SECRET:-$$GEN_AUTH_SECRET}"
-        INTERNAL_API_SECRET="$${INTERNAL_API_SECRET:-$$GEN_INTERNAL_API_SECRET}" &&
+        export INTERNAL_API_SECRET="$${INTERNAL_API_SECRET:-$$GEN_INTERNAL_API_SECRET}" &&
         exec node apps/web/server.js
     ports:
-      - "3000:3000"
+      # 127.0.0.1 only: there is no login, so the app must not be reachable
+      # from other machines on the network. See the README to change this.
+      - "127.0.0.1:3000:3000"
     volumes:
       - secrets:/secrets:ro
     depends_on:

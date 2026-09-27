@@ -7,6 +7,7 @@ import type {
   ChatMessage,
   NormalizedToolCall,
 } from "./types.js";
+import { llmConfig } from "../llm/settings.js";
 
 // Provider adapter: one interface, three modes.
 //
@@ -259,7 +260,7 @@ class StubProvider implements AgentProvider {
 
 export function getProvider(): AgentProvider {
   if (!getChatClient()) return new StubProvider();
-  return env.LLM_TOOL_MODE === "hermes-xml"
+  return llmConfig().toolMode === "hermes-xml"
     ? new HermesXmlProvider()
     : new NativeToolsProvider();
 }

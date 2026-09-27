@@ -4,6 +4,7 @@ import { callLLM, getChatClient } from "../llm/client.js";
 import { runAgentLoop, type RunResult } from "../agent/loop.js";
 import { buildSystemPrompt, loadWorkspaceProfile } from "../agent/prompts.js";
 import { dimensionsForProfile, type Dimension } from "./rubric.js";
+import { llmConfig } from "../llm/settings.js";
 
 // Report orchestration: ONE agent run (one cost cap, one transcript) walks
 // the rubric dimensions SEQUENTIALLY, but each dimension starts from a fresh
@@ -166,7 +167,7 @@ async function writeExecutiveSummary(run: ReportRunRow): Promise<void> {
       workspaceId: run.workspace_id,
       operation: "report",
       params: {
-        model: env.HEAVY_MODEL,
+        model: llmConfig().heavyModel,
         max_tokens: 1500,
         messages: [
           {

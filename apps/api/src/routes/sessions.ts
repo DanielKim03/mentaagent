@@ -135,7 +135,7 @@ export async function sessionRoutes(app: FastifyInstance) {
       if (quota.length === 0) {
         return reply
           .code(402)
-          .send({ error: "you've used all your free questions — upgrade to ask more" });
+          .send({ error: "question quota exhausted" });
       }
 
       let runId: string;

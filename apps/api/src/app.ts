@@ -19,6 +19,7 @@ import { runRoutes } from "./routes/runs.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { skillsRoutes } from "./routes/skills.js";
 import { sourcesRoutes } from "./routes/sources.js";
+import { settingsRoutes } from "./routes/settings.js";
 import { workspaceRoutes } from "./routes/workspace.js";
 
 export async function buildApp() {
@@ -92,7 +93,7 @@ export async function buildApp() {
 
   await registerAuthHook(app);
 
-  // BudgetExceededError → 402 Payment Required (the web prompts an upgrade).
+  // BudgetExceededError → 402 (the optional LLM_DAILY_USD_CAP was hit).
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof BudgetExceededError) {
       return reply.code(402).send({
@@ -110,6 +111,7 @@ export async function buildApp() {
     Sentry.setupFastifyErrorHandler(app);
   }
 
+  await app.register(settingsRoutes);
   await app.register(sessionRoutes);
   await app.register(runRoutes);
   await app.register(sourcesRoutes);

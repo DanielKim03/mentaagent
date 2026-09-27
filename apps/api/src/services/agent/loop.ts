@@ -12,6 +12,7 @@ import type {
   RunKind,
 } from "./types.js";
 import { RUN_POLICY } from "./types.js";
+import { llmConfig } from "../llm/settings.js";
 
 // The tool-calling loop. Every message is persisted to agent_messages as it
 // is produced (single source of truth: streaming replay, resume, and the UI
@@ -152,7 +153,7 @@ export async function runAgentLoop(args: {
   const defsByName = new Map(defs.map((d) => [d.name, d]));
   const provider = getProvider();
   const model =
-    run.model ?? (policy.model === "heavy" ? env.HEAVY_MODEL : env.AGENT_MODEL);
+    run.model ?? (policy.model === "heavy" ? llmConfig().heavyModel : llmConfig().agentModel);
   const operation = run.kind === "report" ? "report" : run.kind === "reflect" ? "reflect" : "agent";
 
   const startedAt = Date.now();

@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { pool } from "../src/db/client.js";
 
-// DB-backed test for the free-tier consumption gate (migration 008). Mirrors
-// the atomic decrement/refund SQL used by the sessions route + runner so the
-// "8 questions then blocked, refund on failure" contract is locked down.
+// DB-backed test for the optional question quota. Self-hosted workspaces have
+// none (migration 009), but the gate is kept: this mirrors the atomic
+// decrement/refund SQL used by the sessions route + runner.
 // Random-UUID workspaces, cascade cleanup, never calls a paid LLM.
 
 const created: string[] = [];
@@ -49,23 +49,22 @@ afterAll(async () => {
   await pool.end();
 });
 
-describe("free-tier question quota", () => {
-  it("gives brand-new (free) workspaces the migration-008 defaults", async () => {
+describe("question quota", () => {
+  it("gives new workspaces no limits (migration 009, self-hosted)", async () => {
     const id = randomUUID();
     created.push(id);
-    // A bare insert — the path web signup takes — relies on column defaults.
     await pool.query("INSERT INTO workspaces (id, name) VALUES ($1, 'defaults-test')", [id]);
     const { rows } = await pool.query<{
-      plan: string;
       question_quota: number | null;
       source_upload_quota: number | null;
+      llm_cap_usd_micros: string | null;
     }>(
-      "SELECT plan, question_quota, source_upload_quota FROM workspaces WHERE id = $1",
+      "SELECT question_quota, source_upload_quota, llm_cap_usd_micros FROM workspaces WHERE id = $1",
       [id]
     );
-    expect(rows[0].plan).toBe("free");
-    expect(rows[0].question_quota).toBe(8);
-    expect(rows[0].source_upload_quota).toBe(4);
+    expect(rows[0].question_quota).toBeNull();
+    expect(rows[0].source_upload_quota).toBeNull();
+    expect(rows[0].llm_cap_usd_micros).toBeNull();
   });
 
   it("allows exactly N questions, then blocks", async () => {

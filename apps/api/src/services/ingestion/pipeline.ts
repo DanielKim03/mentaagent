@@ -11,6 +11,7 @@ import { chunkSheet, chunkText, type Chunk } from "./chunk.js";
 import type { ParsedSource } from "./parsers/types.js";
 import { computeSpreadsheetStats } from "./stats.js";
 import { extractDocumentEntities } from "../graph/entities.js";
+import { llmConfig } from "../llm/settings.js";
 
 // Upload → document → chunks → embeddings → summary. Replaces Mentapath's
 // wiki planner/executor with a faithful-raw-text knowledge layer: the agent
@@ -79,7 +80,7 @@ async function summarizeDocument(
       workspaceId,
       operation: "summarize",
       params: {
-        model: env.AGENT_MODEL,
+        model: llmConfig().agentModel,
         max_tokens: 300,
         messages: [
           {
