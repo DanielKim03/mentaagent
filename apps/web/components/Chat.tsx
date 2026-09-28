@@ -180,12 +180,41 @@ export default function Chat({
     if (stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Only the user's own scrolling changes the pin; content growing doesn't
-  // fire scroll events, and our own scrollTop writes land at the bottom.
+  // Content can also grow after that effect has run (the tool list, a table
+  // finishing layout, the composer changing size). Re-pin on any resize of
+  // the transcript or the viewport so the last line always ends up above
+  // the composer, not a few pixels short.
+  useEffect(() => {
+    const el = scrollRef.current;
+    const content = el?.firstElementChild;
+    if (!el || !content) return;
+    const ro = new ResizeObserver(() => {
+      if (stickToBottom.current) el.scrollTop = el.scrollHeight;
+    });
+    ro.observe(content);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Unpin only on the user's own input (wheel up, touch, dragging the
+  // scrollbar), never from scroll position alone: scroll events arrive a
+  // frame late, and a fast stream can add 100+ px in that frame, which would
+  // look like the user had scrolled away. Re-pin once they're back near the
+  // bottom.
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 80) stickToBottom.current = true;
+  }, []);
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    if (e.deltaY < 0) stickToBottom.current = false;
+  }, []);
+  const unpin = useCallback(() => {
+    stickToBottom.current = false;
+  }, []);
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    // A press on the container itself (not its content) is the scrollbar.
+    if (e.target === scrollRef.current) stickToBottom.current = false;
   }, []);
 
   // Auto-grow the composer.
@@ -355,7 +384,14 @@ export default function Chat({
 
   return (
     <div className="flex h-full flex-col">
-      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        onWheel={onWheel}
+        onTouchMove={unpin}
+        onPointerDown={onPointerDown}
+        className="flex-1 overflow-y-auto [overflow-anchor:none]"
+      >
         <div className="mx-auto max-w-3xl px-4 py-8">
           {empty ? (
             <div className="mt-[12vh] text-center">
