@@ -8,7 +8,7 @@ the business is lacking, where the risks are, and what to improve, and its
 answers name the files they came from. It remembers what it learns across
 conversations.
 
-<!-- TODO: 20-second GIF (upload a file, ask, see the citation) -->
+![Upload a spreadsheet, ask a question, get an answer that names its sources](docs/demo.gif)
 
 ## What you get
 
