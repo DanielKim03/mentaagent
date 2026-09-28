@@ -9,7 +9,7 @@ the business is lacking, where the risks are, and what to improve, and its
 answers name the files they came from. It remembers what it learns across
 conversations.
 
-![Upload a spreadsheet, ask a question, get an answer that names its sources](docs/demo.gif)
+![Upload an inventory spreadsheet, ask what to reorder this week, get an answer that names its source](docs/demo.gif)
 
 All of it runs on your machine. There is no account, no sign-up, no
 subscription. Your files stay on your computer; only what the agent reads is
