@@ -226,9 +226,8 @@ What works: everything above, tested end to end on a fresh clone with
 a button to generate a report on demand, PDF export of reports beyond print
 styles.
 
-The maintainer starts 18 months of military service in October 2026 and will
-be slow to answer issues and pull requests until April 2028. The code is
-yours to fork.
+From October 2026 to April 2028 the maintainer will be slow to answer issues
+and pull requests. The code is yours to fork.
 
 ## Contributing
 
