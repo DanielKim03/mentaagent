@@ -59,7 +59,7 @@ but not for real questions.
 The first build takes a few minutes; later starts take seconds. Your database,
 uploaded files and settings are kept in Docker volumes between restarts.
 
-![The Model & API key page](docs/settings.png)
+![The Model & API key page](docs/model-settings.png)
 
 ### Good to know
 
