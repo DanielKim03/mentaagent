@@ -118,7 +118,10 @@ export async function runReportOrchestration(
 
     // Fresh per-dimension context: only this dimension's task message.
     const result = await runAgentLoop({
-      run: { ...run, iterations: await currentIterations(run.id) },
+      // Carry both counters forward from the database: each dimension's loop
+      // starts from them, so a stale cost would reset the run's total and let
+      // every dimension spend up to the whole report cap.
+      run: { ...run, ...(await currentProgress(run.id)) },
       systemPrompt,
       history: [{ role: "user", content: task }],
     });
@@ -136,12 +139,17 @@ export async function runReportOrchestration(
   return { status: "done", finalText: "Report complete." };
 }
 
-async function currentIterations(runId: string): Promise<number> {
-  const { rows } = await pool.query<{ iterations: number }>(
-    "SELECT iterations FROM agent_runs WHERE id = $1",
+async function currentProgress(
+  runId: string
+): Promise<{ iterations: number; cost_usd_micros: string }> {
+  const { rows } = await pool.query<{ iterations: number; cost_usd_micros: string }>(
+    "SELECT iterations, cost_usd_micros::text FROM agent_runs WHERE id = $1",
     [runId]
   );
-  return rows[0]?.iterations ?? 0;
+  return {
+    iterations: rows[0]?.iterations ?? 0,
+    cost_usd_micros: rows[0]?.cost_usd_micros ?? "0",
+  };
 }
 
 async function writeExecutiveSummary(run: ReportRunRow): Promise<void> {
