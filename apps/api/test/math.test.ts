@@ -25,6 +25,13 @@ describe("evaluateMath", () => {
     expect(evaluateMath("round(PI, 4)")).toBe(3.1416);
   });
 
+  it("treats YYYY-MM-DD as a date, so subtracting dates gives days", () => {
+    expect(evaluateMath("2026-09-28 - 2025-11-29")).toBe(303);
+    expect(evaluateMath("(2026-01-01 - 2025-01-01) / 7")).toBeCloseTo(52.14, 2);
+    expect(() => evaluateMath("2026-02-30 - 2026-01-01")).toThrow(/not a real date/);
+    expect(evaluateMath("2026 - 9 - 28")).toBe(1989); // spaced out: plain subtraction
+  });
+
   it("refuses anything that isn't arithmetic", () => {
     for (const bad of [
       "constructor",

@@ -10,7 +10,12 @@
 //   term    := unary (('*' | '/' | '%') unary)*
 //   unary   := ('+' | '-') unary | power
 //   power   := primary ('^' unary)?
-//   primary := number | constant | func '(' expr (',' expr)* ')' | '(' expr ')'
+//   primary := number | date | constant | func '(' expr (',' expr)* ')' | '(' expr ')'
+//
+// A date written YYYY-MM-DD is a number of days (since 1970-01-01), so
+// "2026-09-28 - 2025-11-29" is the days between them (303). Without this the
+// model's natural way of asking gave plain subtraction (-76) and a false
+// "76 days overdue" in a real report.
 
 const CONSTANTS: Record<string, number> = { PI: Math.PI, E: Math.E };
 
@@ -49,6 +54,15 @@ function tokenize(src: string): Token[] {
     const c = src[i];
     if (/\s/.test(c)) {
       i++;
+    } else if (/^\d{4}-\d{2}-\d{2}(?![\d.])/.test(src.slice(i))) {
+      const [y, m, d] = src.slice(i, i + 10).split("-").map(Number);
+      const ms = Date.UTC(y, m - 1, d);
+      const back = new Date(ms);
+      if (back.getUTCFullYear() !== y || back.getUTCMonth() !== m - 1 || back.getUTCDate() !== d) {
+        throw new Error(`not a real date: ${src.slice(i, i + 10)}`);
+      }
+      tokens.push({ kind: "num", value: ms / 86_400_000 });
+      i += 10;
     } else if (/[0-9.]/.test(c)) {
       const m = /^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/.exec(src.slice(i));
       if (!m) throw new Error(`bad number at position ${i + 1}`);

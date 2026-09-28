@@ -10,7 +10,7 @@ import { registerTool } from "../registry.js";
 registerTool({
   name: "run_calculation",
   description:
-    "Evaluate a math expression exactly (margins, runway, ratios, growth rates). Supports + - * / ^ %, parentheses, PI, E and the functions sqrt, abs, round(x, digits), floor, ceil, min, max, sum, avg, log (natural), log10, exp, pow. Example: \"(48200 - 31000) / 48200 * 100\".",
+    "Evaluate a math expression exactly (margins, runway, ratios, growth rates). Supports + - * / ^ %, parentheses, PI, E and the functions sqrt, abs, round(x, digits), floor, ceil, min, max, sum, avg, log (natural), log10, exp, pow. Dates written YYYY-MM-DD count as days, so 2026-09-28 - 2025-11-29 gives the days between two dates. Example: \"(48200 - 31000) / 48200 * 100\".",
   parameters: z.object({
     expression: z.string().min(1).max(500),
     note: z.string().optional().describe("What this calculation represents"),

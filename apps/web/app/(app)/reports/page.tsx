@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileBarChart, ChevronRight } from "lucide-react";
 import { apiGet } from "@/lib/api";
+import GenerateReportButton from "@/components/GenerateReportButton";
 
 type ReportRow = {
   id: string;
@@ -18,6 +19,7 @@ function scoreTone(score: number) {
 
 export default async function ReportsPage() {
   const { reports } = await apiGet<{ reports: ReportRow[] }>("/api/reports");
+  const generating = reports.some((r) => r.status === "generating");
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 md:p-8">
@@ -25,18 +27,19 @@ export default async function ReportsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Business health reports</h1>
         <p className="mt-1 text-sm text-neutral-500">
           A full investigation across finance, customers, contracts,
-          operations, and more — scored and cited from your data. Reports are
-          generated automatically and emailed to you; they also show up here.
+          operations, and more — scored and cited from your data. A report is
+          generated automatically each week and each month once you have
+          uploaded files, or you can start one now.
         </p>
       </div>
+      <GenerateReportButton generating={generating} />
       <div className="space-y-2">
         {reports.length === 0 && (
           <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-100 p-8 text-center">
             <FileBarChart className="mx-auto mb-3 h-8 w-8 text-neutral-400" />
             <p className="text-sm text-neutral-500">
               No reports yet. Upload some business data and your first report
-              is generated automatically — you&apos;ll get it by email and
-              it&apos;ll appear here.
+              is generated automatically and appears here, or generate one now.
             </p>
           </div>
         )}

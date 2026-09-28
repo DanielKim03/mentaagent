@@ -72,7 +72,8 @@ uploaded files and settings are kept in Docker volumes between restarts.
   can't read photos; with no vision model, photo uploads are refused rather
   than failing later.
 - **Reports run on their own**, weekly and monthly once you have uploaded
-  files. With a real model each one costs money on your provider's account.
+  files, and **Generate report now** on the Reports page starts one whenever
+  you like. With a real model each one costs money on your provider's account.
   `LLM_DAILY_USD_CAP` (below) sets a daily ceiling.
 
 ### Optional settings
@@ -254,9 +255,8 @@ launch, and released here as finished work: accounts and billing removed, one
 person per install. There is no hosted version and no company behind it.
 
 What works: everything above, tested end to end on a fresh clone with
-`docker compose up`. What is not built: connectors (Google Drive and others),
-a button to generate a report on demand, PDF export of reports beyond print
-styles.
+`docker compose up`. What is not built: connectors (Google Drive and others)
+and PDF export of reports beyond print styles.
 
 From October 2026 to April 2028 the maintainer will be slow to answer issues
 and pull requests. The code is yours to fork.
@@ -278,8 +278,8 @@ pnpm --filter api test         # tests use a stub model and never call a paid on
 
 Good first contributions: upgrading to Next.js 15 and Fastify 5 (see
 Security), a real-key test report for a provider not yet tested, more file
-types (`.doc`, `.msg`), a "generate report now" button, translations of the
-UI, and pricing entries for more models.
+types (`.doc`, `.msg`), translations of the UI, and pricing entries for more
+models.
 
 ## License
 

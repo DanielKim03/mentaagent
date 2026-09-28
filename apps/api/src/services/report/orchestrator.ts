@@ -132,11 +132,60 @@ export async function runReportOrchestration(
       await finalizeReport(run, /* partial */ true);
       return result;
     }
+
+    // Some models finish a dimension by writing their findings as a reply
+    // instead of calling write_report_section, which left the section empty
+    // while the report showed "ready" (seen with DeepSeek, 2026-09-28). Ask
+    // once more in the same context; if the section is still empty, keep the
+    // findings the model did write rather than a hole in the report.
+    if (await sectionPending(run.report_id, dim.key)) {
+      const nudge =
+        `You wrote your findings but did not save them. Call write_report_section now ` +
+        `for section_key "${dim.key}" with those findings as markdown and a 0-100 score, ` +
+        `then say "SECTION COMPLETE".`;
+      await pool.query(
+        `INSERT INTO agent_messages (run_id, session_id, workspace_id, seq, role, content)
+         VALUES ($1, NULL, $2, $3, 'user', $4)`,
+        [run.id, run.workspace_id, await nextSeq(run.id), nudge]
+      );
+      const retry = await runAgentLoop({
+        run: { ...run, ...(await currentProgress(run.id)) },
+        systemPrompt,
+        history: [
+          { role: "user", content: task },
+          { role: "assistant", content: result.finalText },
+          { role: "user", content: nudge },
+        ],
+      });
+      if (retry.status !== "done") {
+        await finalizeReport(run, /* partial */ true);
+        return retry;
+      }
+      if (await sectionPending(run.report_id, dim.key)) {
+        await pool.query(
+          `UPDATE report_sections SET content_md = $3, status = 'written'
+            WHERE report_id = $1 AND section_key = $2 AND status = 'pending'`,
+          [
+            run.report_id,
+            dim.key,
+            result.finalText.trim() || "This section could not be completed.",
+          ]
+        );
+      }
+    }
   }
 
   await writeExecutiveSummary(run);
   await finalizeReport(run, false);
   return { status: "done", finalText: "Report complete." };
+}
+
+async function sectionPending(reportId: string | null, key: string): Promise<boolean> {
+  const { rows } = await pool.query<{ status: string }>(
+    "SELECT status FROM report_sections WHERE report_id = $1 AND section_key = $2",
+    [reportId, key]
+  );
+  return rows[0]?.status === "pending";
 }
 
 async function currentProgress(
