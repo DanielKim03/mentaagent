@@ -67,6 +67,10 @@ const nextConfig = {
   // image small. Note: this config (incl. allowedOrigins) is fixed at build
   // time in standalone mode, so WEB_ORIGIN is passed as a Docker build arg.
   output: "standalone",
+  // The app never uses next/image. Next 14's image optimizer has open
+  // advisories only fixed in 15 (GHSA-2xp9-vwfh-vxw4 and others), and it runs
+  // before middleware, so switch it off rather than leave it reachable.
+  images: { unoptimized: true },
   experimental: {
     // Trace from the monorepo root so workspace dependencies are included.
     outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),

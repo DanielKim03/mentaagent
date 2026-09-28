@@ -9,6 +9,7 @@ import {
   readLlmSettingsRow,
   refreshLlmConfig,
   resolveLlmConfig,
+  type LlmSettingsRow,
 } from "../services/llm/settings.js";
 
 // Model provider settings for the web Settings page. Keys are write-only:
@@ -35,6 +36,14 @@ const putSchema = z.object({
   vision_base_url: url.optional(),
   vision_model: text.optional(),
 });
+
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).host;
+  } catch {
+    return u;
+  }
+};
 
 const errMsg = (err: unknown) =>
   (err instanceof Error ? err.message : String(err)).slice(0, 300);
@@ -79,9 +88,36 @@ export async function settingsRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       return reply.code(400).send({ error: "invalid settings", issues: parsed.error.issues });
     }
+    const data = { ...parsed.data };
+
+    // A saved key belongs to the host it was saved for. If a change moves the
+    // chat or embeddings address to another host without a new key, drop the
+    // old key here, on the server. The Settings form does this too, but only
+    // the server can make it a rule: otherwise anything that can reach this
+    // API could point the saved key, and every document the agent reads, at
+    // a server of its choosing.
+    const row = await readLlmSettingsRow();
+    const changes = Object.fromEntries(
+      Object.entries(data)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => [k, v === "" ? null : v])
+    );
+    const before = resolveLlmConfig(row);
+    const after = resolveLlmConfig({ ...(row ?? {}), ...changes } as LlmSettingsRow);
+    if (data.llm_api_key === undefined && hostOf(after.baseUrl) !== hostOf(before.baseUrl)) {
+      data.llm_api_key = "";
+    }
+    if (
+      data.embeddings_api_key === undefined &&
+      row?.embeddings_api_key &&
+      hostOf(after.embeddingsBaseUrl) !== hostOf(before.embeddingsBaseUrl)
+    ) {
+      data.embeddings_api_key = "";
+    }
+
     const sets: string[] = [];
     const vals: unknown[] = [];
-    for (const [col, v] of Object.entries(parsed.data)) {
+    for (const [col, v] of Object.entries(data)) {
       if (v === undefined) continue;
       vals.push(v === "" ? null : v);
       sets.push(`${col} = $${vals.length}`);

@@ -1,32 +1,23 @@
 import { z } from "zod";
-import { Parser } from "expr-eval";
+import { evaluateMath } from "./math.js";
 import { registerTool } from "../registry.js";
 
-// Sandboxed math via expr-eval: a real expression parser, no eval, no
-// filesystem, no property access on host objects. LLMs are unreliable at
-// arithmetic — every number in a finding should come through here or
-// aggregate_table.
-
-const parser = new Parser({
-  operators: {
-    logical: false,
-    comparison: true,
-    concatenate: false,
-    assignment: false,
-  },
-});
-
+// Math through a small arithmetic evaluator (./math.ts): numbers,
+// operators and a fixed list of functions, nothing else. The expression
+// comes from the model, which reads uploaded documents, so it is untrusted.
+// LLMs are unreliable at arithmetic — every number in a finding should come
+// through here or aggregate_table.
 registerTool({
   name: "run_calculation",
   description:
-    "Evaluate a math expression exactly (margins, runway, ratios, growth rates). Supports + - * / ^ %, parentheses, and functions like sqrt, abs, round, min, max, log. Example: \"(48200 - 31000) / 48200 * 100\".",
+    "Evaluate a math expression exactly (margins, runway, ratios, growth rates). Supports + - * / ^ %, parentheses, PI, E and the functions sqrt, abs, round(x, digits), floor, ceil, min, max, sum, avg, log (natural), log10, exp, pow. Example: \"(48200 - 31000) / 48200 * 100\".",
   parameters: z.object({
     expression: z.string().min(1).max(500),
     note: z.string().optional().describe("What this calculation represents"),
   }),
   execute: async (args) => {
     try {
-      const value = parser.evaluate(args.expression);
+      const value = evaluateMath(args.expression);
       if (typeof value !== "number" || !Number.isFinite(value)) {
         return JSON.stringify({ error: "expression did not produce a finite number" });
       }
