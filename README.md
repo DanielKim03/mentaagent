@@ -1,7 +1,8 @@
 # MentaAgent
 
 **An AI business analyst that actually knows your business.** It runs on your
-own computer, uses open-weight models, and is free (Apache 2.0).
+own computer, uses open-weight models by default or any provider you have a
+key for, and is free (Apache 2.0).
 
 Give it a company's spreadsheets, contracts, PDFs and emails. It tells you what
 the business is lacking, where the risks are, and what to improve, and its
@@ -9,20 +10,6 @@ answers name the files they came from. It remembers what it learns across
 conversations.
 
 ![Upload a spreadsheet, ask a question, get an answer that names its sources](docs/demo.gif)
-
-## What you get
-
-**Ask anything about your business.** Upload spreadsheets, contracts, PDFs and
-emails. The analyst investigates the real numbers and answers with citations
-back to the source.
-
-**Gap-analysis reports.** A health check across finance, customers, contracts,
-operations and more: each dimension scored, with the top gaps and what to do
-next.
-
-**It remembers and improves.** Per-business memory and learned playbooks mean
-it gets sharper at advising you over time, and it flags new risks on a
-schedule.
 
 All of it runs on your machine. There is no account, no sign-up, no
 subscription. Your files stay on your computer; only what the agent reads is
@@ -48,8 +35,9 @@ Open http://localhost:3000. That's it: no account to create.
    offers. "Test saved settings" checks the key before you rely on it.
 2. **Tell it about the business** on the **Profile** page.
 3. **Upload files** on the **Data** page. To try it without your own data, use
-   [`samples/`](samples/): a fictional catering company's revenue, clients,
-   contracts, vendors and inventory.
+   [`samples/`](samples/): eight spreadsheets from a fictional catering
+   company (revenue, clients, contracts, vendors, employees, products,
+   inventory, supplier invoices).
 4. **Ask** in **Chat**.
 
 Without a key the app still runs, on a **stub model** that gives canned
@@ -63,10 +51,6 @@ uploaded files and settings are kept in Docker volumes between restarts.
 
 ### Good to know
 
-- **Only your computer can open it.** There is no login, so Docker publishes
-  the app on `127.0.0.1` only. To reach it from another device, put it behind
-  something that does authentication (a VPN such as Tailscale, or a reverse
-  proxy with a password). Do not simply open the port.
 - **Any provider, your own key.** Presets for OpenAI, Anthropic (Claude),
   Google Gemini, OpenRouter, DeepSeek, Ollama, Groq, Mistral, Together and
   DeepInfra, plus any other OpenAI-compatible server. Each provider's models,
@@ -83,11 +67,10 @@ uploaded files and settings are kept in Docker volumes between restarts.
 - **Search and photos depend on the provider.** Semantic search needs an
   embeddings model that returns 1024-dimension vectors. DeepInfra, OpenAI,
   Gemini, Mistral, OpenRouter and Ollama have one. Anthropic, DeepSeek, Groq
-  and Together don't, so search falls back to keywords; you can add a separate
-  embeddings provider under Advanced. Groq can't read photos; the others can.
-- **Missing keys turn features off rather than breaking the app.** With no
-  embeddings key, search falls back to Postgres full-text. With no vision
-  model, image uploads are refused.
+  and Together don't, so search falls back to keyword search (Postgres
+  full-text); you can add a separate embeddings provider under Advanced. Groq
+  can't read photos; with no vision model, photo uploads are refused rather
+  than failing later.
 - **Reports run on their own**, weekly and monthly once you have uploaded
   files. With a real model each one costs money on your provider's account.
   `LLM_DAILY_USD_CAP` (below) sets a daily ceiling.
@@ -102,17 +85,19 @@ Everything works without these. To use one, create a file named `.env` next to
 |---|---|
 | `LLM_DAILY_USD_CAP=5` | Stops model calls for the day once spending reaches $5. Default: no cap. |
 | `WEB_ORIGIN=https://your.domain` | The address the app is served on, if not `http://localhost:3000` (comma-separated for several). Requests addressed to anything else are refused (see Security). It is built into the app, so rebuild after changing it: `docker compose up -d --build`. |
-| `LLM_API_KEY`, `LLM_BASE_URL`, `AGENT_MODEL`, `HEAVY_MODEL`, `LLM_TOOL_MODE`, `EMBEDDINGS_API_KEY`, `EMBEDDINGS_BASE_URL`, `EMBEDDINGS_MODEL`, `VISION_MODEL` | The same model settings as the Settings page, for people who prefer a file. Values saved on the page win. |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `AGENT_MODEL`, `HEAVY_MODEL`, `LLM_TOOL_MODE`, `EMBEDDINGS_API_KEY`, `EMBEDDINGS_BASE_URL`, `EMBEDDINGS_MODEL`, `VISION_BASE_URL`, `VISION_API_KEY`, `VISION_MODEL` | The same model settings as the Settings page, for people who prefer a file. Values saved on the page win. |
 
 ### Security
 
 - **Nothing is reachable from other machines.** The app, database and Redis
-  listen on `127.0.0.1` only, and there is no login.
+  listen on `127.0.0.1` only, because there is no login. To use it from
+  another device, put it behind something that does authentication (a VPN
+  such as Tailscale, or a reverse proxy with a password) and add that address
+  to `WEB_ORIGIN`. Do not simply open the port.
 - **Other websites can't use it through your browser.** A page open in your
   browser runs on the same machine, so the app also refuses requests
   addressed to any name but `localhost` (blocking DNS rebinding) and changes
-  that come from another site's pages. Add your own address to `WEB_ORIGIN`
-  if you put it behind a proxy.
+  that come from another site's pages.
 - **Your API key only goes to its provider.** Keys are stored in the local
   database and never sent back to the browser (it shows the last four
   characters). If the provider address changes without a new key, the saved
@@ -132,11 +117,11 @@ Everything works without these. To use one, create a file named `.env` next to
 ## What it does, in detail
 
 - **Reads your files.** CSV, Excel, PDF, Word, `.eml`, plain text, and photos
-  (through a vision model). Each file is parsed, chunked and embedded in the
-  background.
-- **Answers with citations.** The agent investigates with tools over your data
-  (search, read, aggregate, calculate) and names the source document for each
-  claim.
+  (through a vision model). Each file is parsed, summarised and chunked in the
+  background, and embedded for search when an embeddings model is set.
+- **Answers with sources.** The agent investigates with tools over your data
+  (search, read, aggregate, calculate) and ends each answer with the files it
+  drew on.
 - **Knowledge graph.** Documents are linked to the people, customers, vendors,
   products and contracts they mention. The agent follows those links to reason
   across files, and you can browse them.
@@ -148,8 +133,9 @@ Everything works without these. To use one, create a file named `.env` next to
   it.
 - **Reports.** Seven dimensions, each investigated with a fresh context, then
   summarised by a larger model.
-- **Alerts.** A weekly monitor run checks what you asked it to watch and what
-  changed, and raises alerts only when something is worth raising.
+- **Alerts.** A monitor run checks what you asked it to watch and what
+  changed, after new files arrive and once a week, and raises alerts only when
+  something is worth raising.
 
 ## Architecture
 
@@ -168,7 +154,8 @@ flowchart LR
 
 Three processes and two databases, all started by `docker compose up`. The
 **web** app (Next.js) renders the pages and forwards browser requests to the
-**api** (Fastify), which only it can call. The api writes to Postgres and puts
+**api** (Fastify), which only it can call, after checking each request comes
+from the app itself (see Security). The api writes to Postgres and puts
 jobs on Redis queues. The **worker** does the slow work: parsing and embedding
 uploads, running the agent, and a maintenance tick every 15 minutes (reflection
 on idle chats, the weekly monitor, memory consolidation, scheduled reports).

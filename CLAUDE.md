@@ -16,7 +16,10 @@ pnpm monorepo, three deployable processes + Postgres 16 (pgvector) + Redis:
 - **web** (`apps/web`) — Next.js 14 App Router, no auth. Browser calls go
   through `/api/proxy/*`, which adds the `INTERNAL_API_SECRET` bearer.
   Server components use `lib/api.ts` (same header, direct). `/` redirects to
-  `/chat`.
+  `/chat`. `middleware.ts` refuses requests whose Host isn't local (or in
+  `WEB_ORIGIN`) and writes whose Origin is another site: no login means the
+  owner's own browser is the attack path (DNS rebinding, cross-site forms).
+  `next/image` optimization is off (`images.unoptimized`).
 - **api** (`apps/api/src/server.ts`) — Fastify on :3001, private network.
   `lib/auth.ts` checks the shared secret when set and pins every request to
   the default workspace.
@@ -67,6 +70,15 @@ FTS. Fallback mode `LLM_TOOL_MODE=hermes-xml` for hosts
 without native tool calling (schemas in system prompt, `<tool_call>` parsed
 from text). The embeddings key falls back to the chat key when both URLs are
 on the same host; vision falls back to the embeddings provider.
+**Provider differences** live in one place, `adaptChatParams` (tested in
+`test/llm-adapt.test.ts`): thinking off where a host documents a switch
+(DeepSeek `thinking`, DeepInfra/OpenAI/Mistral/Ollama `reasoning_effort`,
+Together `reasoning`), `max_completion_tokens` for OpenAI and Groq, no
+`stream_options` for Mistral. Thinking counts against the output ceiling, so
+the ceilings are high (chat 8k, reports 12k); only used tokens are billed.
+The settings API drops a saved key when its URL moves to another host.
+`run_calculation` uses `tools/math.ts`, a small arithmetic parser: model
+output is untrusted input.
 **Budget discipline (load-bearing):** every chat/embed/vision call atomically
 pre-charges `llm_usage` under an advisory lock and reconciles to real tokens
 after. That feeds the per-run cost caps (`RUN_POLICY`) and the optional daily
@@ -109,7 +121,7 @@ cap `LLM_DAILY_USD_CAP` (→ HTTP 402).
   feeds the transcript to a tool-whitelisted reflect run (remember /
   propose_skill / update_watchlist); its final text becomes the session
   summary (recent summaries injected into chat prompts).
-- **Monitor runs**: weekly per workspace; prompt = due `watch_items` + docs
+- **Monitor runs**: weekly per workspace, and once after a burst of uploads; prompt = due `watch_items` + docs
   changed since last sweep; `NOTHING_NOTEWORTHY` reply = suppressed.
 
 ## Reports (`services/report/`)
