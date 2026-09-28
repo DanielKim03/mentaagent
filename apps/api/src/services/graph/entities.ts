@@ -37,7 +37,8 @@ async function extractEntities(
       operation: "summarize",
       params: {
         model: llmConfig().agentModel,
-        max_tokens: 1200,
+        // Room for models that think first (a cut-off reply is broken JSON).
+        max_tokens: 4000,
         messages: [
           {
             role: "system",

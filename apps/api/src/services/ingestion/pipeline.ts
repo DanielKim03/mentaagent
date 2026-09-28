@@ -81,7 +81,8 @@ async function summarizeDocument(
       operation: "summarize",
       params: {
         model: llmConfig().agentModel,
-        max_tokens: 300,
+        // Room for models that think first; the summary itself is short.
+        max_tokens: 2000,
         messages: [
           {
             role: "system",

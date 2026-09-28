@@ -27,7 +27,7 @@ const schema = z.object({
   // get rejected with a 401, or break the model name / base URL.
   LLM_BASE_URL: z.string().trim().url().default("https://api.deepinfra.com/v1/openai"),
   LLM_API_KEY: z.string().trim().optional(),
-  AGENT_MODEL: z.string().trim().default("deepseek-ai/DeepSeek-V4-Flash"),
+  AGENT_MODEL: z.string().trim().default("deepseek-ai/DeepSeek-V4-Flash-0731"),
   HEAVY_MODEL: z.string().trim().default("deepseek-ai/DeepSeek-V4-Pro"),
   // "native" = OpenAI tools param (Nebius Hermes 4); "hermes-xml" = schemas
   // in system prompt + <tool_call> parsing (hosts without native tools).

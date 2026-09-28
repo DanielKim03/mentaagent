@@ -18,8 +18,8 @@ import { clampDocumentText } from "./limits.js";
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
 // Output budget for the transcription. A dense page of text plus a short
-// description fits well under this.
-const MAX_OUTPUT_TOKENS = 1500;
+// description fits well under this, with room for a model that thinks first.
+const MAX_OUTPUT_TOKENS = 4000;
 
 // The image is UNTRUSTED user data (same posture as document text elsewhere in
 // the pipeline): instruct the model to transcribe/describe only and to ignore

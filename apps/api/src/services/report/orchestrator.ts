@@ -176,7 +176,7 @@ async function writeExecutiveSummary(run: ReportRunRow): Promise<void> {
       operation: "report",
       params: {
         model: llmConfig().heavyModel,
-        max_tokens: 1500,
+        max_tokens: 6000,
         messages: [
           {
             role: "system",

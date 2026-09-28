@@ -272,6 +272,37 @@ export default function LlmSettingsForm({
         ))}
       </datalist>
 
+      {provider.betterChatModel && (
+        <div className="flex flex-col gap-1.5 text-sm font-medium">
+          Answer quality
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "standard", label: "Standard", model: provider.chatModel, sub: "" },
+              {
+                key: "better",
+                label: "Better",
+                model: provider.betterChatModel,
+                sub: provider.betterNote ?? "",
+              },
+            ].map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => setChatModel(o.model)}
+                className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                  chatModel === o.model
+                    ? "border-neutral-500 bg-neutral-200 font-medium"
+                    : "border-neutral-300 font-normal hover:border-neutral-500"
+                }`}
+              >
+                {o.label}
+                {o.sub && <span className="ml-1.5 text-xs font-normal text-neutral-500">{o.sub}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!showModels ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <input type="hidden" name="agent_model" value={chatModel} />

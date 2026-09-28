@@ -100,7 +100,8 @@ async function buildHistory(run: {
       content: m.content,
       tool_calls: m.tool_calls ?? undefined,
       tool_call_id: m.tool_call_id ?? undefined,
-      name: m.name ?? undefined,
+      // No `name` on messages: tool results are matched by tool_call_id, and
+      // Groq rejects requests that carry messages[].name.
     });
   }
   return history;

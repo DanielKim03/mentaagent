@@ -47,19 +47,59 @@ export function getChatClient(): OpenAI | null {
   return chatCached.client;
 }
 
-// DeepSeek's first-party API runs V4 models in thinking mode by default.
-// Thinking tokens count against max_tokens and this client never reads
-// reasoning_content, so a turn could spend its whole budget thinking and
-// return an empty answer. Turn thinking off for that host; other
-// OpenAI-compatible hosts get no extra fields.
-function chatRequestExtras(): Record<string, unknown> {
+// Every provider speaks "OpenAI-compatible", but each differs in a few
+// places, and most current models think before answering by default. This
+// client never reads reasoning, and thinking tokens count against the output
+// limit, so a turn could spend its whole budget thinking and return nothing.
+// adaptChatParams turns thinking off where the provider documents a switch,
+// and fixes the other known differences. Checked against each provider's
+// docs on 2026-09-28; DeepSeek and DeepInfra also against the live API.
+// Where thinking can't be turned off (Gemini, Groq's gpt-oss, Claude 5), the
+// output limits in the callers leave room for it.
+export function adaptChatParams<T extends object>(baseUrl: string, params: T): T {
   let host = "";
   try {
-    host = new URL(llmConfig().baseUrl).hostname;
+    host = new URL(baseUrl).host;
   } catch {
-    return {};
+    return params;
   }
-  return host === "api.deepseek.com" ? { thinking: { type: "disabled" } } : {};
+  const p = { ...params } as Record<string, unknown>;
+  const model = String(p.model ?? "");
+  const useMaxCompletionTokens = () => {
+    if (p.max_tokens != null) {
+      p.max_completion_tokens = p.max_tokens;
+      delete p.max_tokens;
+    }
+  };
+
+  if (host === "api.deepseek.com") {
+    p.thinking = { type: "disabled" };
+  } else if (host === "api.deepinfra.com") {
+    // V4 Flash models are tagged "reasoning" on DeepInfra; V4 Pro is not.
+    if (/DeepSeek-V4(\.1)?-Flash/i.test(model)) p.reasoning_effort = "none";
+  } else if (host === "api.openai.com") {
+    // max_tokens is deprecated there and refused by reasoning models. GPT-5.x
+    // and GPT-6 only call tools in Chat Completions with reasoning off.
+    useMaxCompletionTokens();
+    if (/^(gpt-5|gpt-6|o\d)/.test(model) && !/astra/.test(model)) p.reasoning_effort = "none";
+  } else if (host === "api.groq.com") {
+    useMaxCompletionTokens();
+    // gpt-oss can't stop reasoning; keep it short and out of the answer.
+    if (/gpt-oss/.test(model)) {
+      p.reasoning_effort = "low";
+      p.include_reasoning = false;
+    }
+  } else if (host === "api.mistral.ai") {
+    // Mistral rejects fields it doesn't document; stream_options is one.
+    delete p.stream_options;
+    if (/mistral-(small|medium)/.test(model)) p.reasoning_effort = "none";
+  } else if (host === "api.together.ai" || host === "api.together.xyz") {
+    if (/DeepSeek-V4(\.1)?-Flash|Qwen3\.5|MiniMax/i.test(model)) p.reasoning = { enabled: false };
+  } else if (host.endsWith(":11434")) {
+    // Ollama: qwen3 / qwen3.5 think by default.
+    if (/qwen3/i.test(model)) p.reasoning_effort = "none";
+  }
+  return p as T;
 }
 
 export function getEmbeddingsClient(): OpenAI | null {
@@ -114,6 +154,45 @@ const PRICING_MICROS_PER_MILLION: Record<
   "Qwen/Qwen3-VL-235B-A22B-Instruct": { input: 200_000, output: 880_000 },
   // Embeddings ($0.01/M tokens on DeepInfra).
   "BAAI/bge-m3": { input: 10_000, output: 0 },
+
+  // Suggested models of the other presets, from each provider's pricing page
+  // on 2026-09-28. One id can be sold by two hosts at different prices
+  // (DeepInfra and Together both serve the dated DeepSeek ids); the table is
+  // keyed by id only, so it holds the higher price, never under-charging.
+  // Prices that change by time of day or by date use the higher band.
+  "deepseek-ai/DeepSeek-V4-Flash-0731": { input: 140_000, output: 280_000 },
+  "deepseek-ai/DeepSeek-V4.1-Flash": { input: 300_000, output: 1_200_000 },
+  "deepseek-ai/DeepSeek-V4-Pro-0813": { input: 1_320_000, output: 3_960_000 },
+  "Qwen/Qwen3.5-9B": { input: 170_000, output: 250_000 },
+  // OpenAI
+  "gpt-6-luna": { input: 100_000, output: 500_000 },
+  "gpt-6-sol": { input: 2_000_000, output: 10_000_000 },
+  "gpt-4.1-mini": { input: 400_000, output: 1_600_000 },
+  "gpt-4.1": { input: 2_000_000, output: 8_000_000 },
+  "text-embedding-3-small": { input: 20_000, output: 0 },
+  // Anthropic
+  "claude-sonnet-5": { input: 2_000_000, output: 10_000_000 },
+  "claude-opus-5-5": { input: 4_000_000, output: 20_000_000 },
+  "claude-haiku-4-5": { input: 1_000_000, output: 5_000_000 },
+  "claude-haiku-4-5-20251001": { input: 1_000_000, output: 5_000_000 },
+  // Google Gemini (3.8 Flash rises to $1.50/$7.50 on 2027-01-01)
+  "gemini-3.5-flash-lite": { input: 300_000, output: 2_500_000 },
+  "gemini-3.8-flash": { input: 1_500_000, output: 7_500_000 },
+  // OpenRouter
+  "openai/gpt-4.1-mini": { input: 400_000, output: 1_600_000 },
+  "openai/gpt-4.1": { input: 2_000_000, output: 8_000_000 },
+  "baai/bge-m3": { input: 10_000, output: 0 },
+  // Groq
+  "openai/gpt-oss-20b": { input: 75_000, output: 300_000 },
+  "openai/gpt-oss-120b": { input: 150_000, output: 600_000 },
+  // Mistral
+  "mistral-small-latest": { input: 150_000, output: 600_000 },
+  "mistral-large-latest": { input: 500_000, output: 1_500_000 },
+  "mistral-embed": { input: 100_000, output: 0 },
+  // Ollama runs on the owner's computer: no charge.
+  "qwen3.5:4b": { input: 0, output: 0 },
+  "qwen3.5:9b": { input: 0, output: 0 },
+  "bge-m3": { input: 0, output: 0 },
 };
 
 // Fallback for unknown models — assume costliest tier so we never under-bill.
@@ -327,7 +406,7 @@ export async function callLLM(args: {
   let completion: OpenAI.Chat.Completions.ChatCompletion;
   try {
     completion = await client.chat.completions.create(
-      { ...args.params, ...chatRequestExtras() },
+      adaptChatParams(llmConfig().baseUrl, args.params),
       { timeout: args.timeoutMs ?? 120_000 }
     );
   } catch (err) {
@@ -399,12 +478,11 @@ export async function callLLMStreaming(args: {
 
   try {
     const stream = await client.chat.completions.create(
-      {
+      adaptChatParams(llmConfig().baseUrl, {
         ...args.params,
-        ...chatRequestExtras(),
-        stream: true,
+        stream: true as const,
         stream_options: { include_usage: true },
-      },
+      }),
       { timeout: args.timeoutMs ?? 120_000 }
     );
     for await (const chunk of stream) {
@@ -577,7 +655,7 @@ export async function callVision(args: {
   let completion: OpenAI.Chat.Completions.ChatCompletion;
   try {
     completion = await client.chat.completions.create(
-      {
+      adaptChatParams(llmConfig().visionBaseUrl, {
         model,
         max_tokens: maxTokens,
         messages: [
@@ -589,7 +667,7 @@ export async function callVision(args: {
             ],
           },
         ],
-      },
+      }),
       { timeout: args.timeoutMs ?? 120_000 }
     );
   } catch (err) {

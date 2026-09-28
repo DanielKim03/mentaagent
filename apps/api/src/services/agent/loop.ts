@@ -21,10 +21,14 @@ import { llmConfig } from "../llm/settings.js";
 // failures. Never throws for model/tool misbehavior — the run row carries
 // the terminal status.
 
-const MAX_OUTPUT_TOKENS = 4000;
-// Chat answers should be tight, so cap them lower than report sections — fewer
-// output tokens = faster final reply. Other kinds keep the larger budget.
-const CHAT_MAX_OUTPUT_TOKENS = 1500;
+// Output ceilings, not targets: a model stops when it's done and only the
+// tokens used are billed. They are this high because many current models
+// think before answering and can't always be told not to (see
+// adaptChatParams), and the thinking counts against the ceiling; at 1,500 a
+// chat turn could be all thinking and no answer. Kept under 16,384, the
+// hard cap some hosts (DeepInfra) enforce.
+const MAX_OUTPUT_TOKENS = 12000;
+const CHAT_MAX_OUTPUT_TOKENS = 8000;
 // ~80K input tokens at ~4 chars/token. Hermes context is 131K; leave head-
 // room for output + safety. Oldest non-system messages are dropped when
 // over (the Phase-2 pre-compaction memory flush hooks in here later).

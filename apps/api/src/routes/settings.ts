@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import OpenAI from "openai";
 import { z } from "zod";
 import { pool } from "../db/client.js";
-import { EMBEDDING_DIM } from "../services/llm/client.js";
+import { EMBEDDING_DIM, adaptChatParams } from "../services/llm/client.js";
 import {
   isLocalUrl,
   llmConfig,
@@ -138,11 +138,14 @@ export async function settingsRoutes(app: FastifyInstance) {
     } = { ok: false, model: c.agentModel };
     try {
       const chat = new OpenAI({ apiKey: c.apiKey, baseURL: c.baseUrl, timeout: 30_000, maxRetries: 0 });
-      await chat.chat.completions.create({
-        model: c.agentModel,
-        messages: [{ role: "user", content: "Reply with the word OK." }],
-        max_tokens: 5,
-      });
+      await chat.chat.completions.create(
+        adaptChatParams(c.baseUrl, {
+          model: c.agentModel,
+          messages: [{ role: "user" as const, content: "Reply with the word OK." }],
+          // Room for a model that thinks before answering.
+          max_tokens: 200,
+        })
+      );
       result.ok = true;
     } catch (err) {
       result.error = errMsg(err);
