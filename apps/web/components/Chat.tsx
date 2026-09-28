@@ -43,6 +43,10 @@ const TOOL_LABELS: Record<string, string> = {
   use_skill: "Consulting a playbook",
   update_watchlist: "Updating the watchlist",
   search_history: "Checking past conversations",
+  get_data_overview: "Looking over your data",
+  find_connections: "Following links between files",
+  propose_skill: "Drafting a playbook",
+  write_report_section: "Writing a report section",
 };
 
 const SUGGESTIONS = [
@@ -262,11 +266,20 @@ export default function Chat({
         if (isFirstMessage) router.refresh();
       };
 
+      // Text written before and after a tool step belongs to different model
+      // turns; keep them as separate paragraphs instead of running together.
+      let afterTool = false;
       es.addEventListener("assistant.delta", (e) => {
         const { delta } = JSON.parse((e as MessageEvent).data) as { delta: string };
-        update((m) => ({ ...m, content: m.content + delta }));
+        const breakFirst = afterTool;
+        afterTool = false;
+        update((m) => ({
+          ...m,
+          content: m.content + (breakFirst && m.content && !/\s$/.test(m.content) ? "\n\n" : "") + delta,
+        }));
       });
       es.addEventListener("tool.call", (e) => {
+        afterTool = true;
         const { name } = JSON.parse((e as MessageEvent).data) as { name: string };
         update((m) => ({ ...m, tools: [...(m.tools ?? []), { name, done: false }] }));
       });
