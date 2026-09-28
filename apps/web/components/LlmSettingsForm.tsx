@@ -132,6 +132,11 @@ export default function LlmSettingsForm({
   );
   const [visionModel, setVisionModel] = useState(saved.vision_model || initial.visionModel || "");
   const [models, setModels] = useState<string[]>([]);
+  // Most people never need to touch the models: picking a provider fills in
+  // its suggested ones. Show them as one line with a "Change" link, except
+  // for providers with no sensible default (Ollama, a custom server).
+  const needsModelChoice = (p: Provider) => p.id === "ollama" || p.id === "custom" || !p.chatModel;
+  const [showModels, setShowModels] = useState(needsModelChoice(initial));
   const [loadState, setLoadState] = useState<{ busy: boolean; msg?: string; error?: boolean }>({
     busy: false,
   });
@@ -156,6 +161,7 @@ export default function LlmSettingsForm({
     setApiKey("");
     setModels([]);
     setLoadState({ busy: false });
+    setShowModels(needsModelChoice(p));
   }
 
   // With a key already saved for this provider, fetch its model list right
@@ -260,56 +266,77 @@ export default function LlmSettingsForm({
         />
       </label>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={loadModels}
-          disabled={loadState.busy || !baseUrl}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium transition-colors hover:border-neutral-500 disabled:opacity-50"
-        >
-          {loadState.busy ? "Loading…" : "Load models"}
-        </button>
-        {loadState.msg && (
-          <span className={`min-w-0 break-words text-xs ${loadState.error ? "text-red-600" : "text-green-700"}`}>
-            {loadState.msg}
-          </span>
-        )}
-      </div>
-
       <datalist id="provider-models">
         {models.map((m) => (
           <option key={m} value={m} />
         ))}
       </datalist>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className={label}>
-          Chat model
-          <ModelSelect
-            key={`chat-${provider.id}`}
-            name="agent_model"
-            value={chatModel}
-            onChange={setChatModel}
-            suggested={provider.chatModel}
-            models={models}
-            className={field}
-          />
-          <span className={hint}>Answers questions. Must support tool calling.</span>
-        </label>
-        <label className={label}>
-          Report model
-          <ModelSelect
-            key={`heavy-${provider.id}`}
-            name="heavy_model"
-            value={heavyModel}
-            onChange={setHeavyModel}
-            suggested={provider.heavyModel}
-            models={models}
-            className={field}
-          />
-          <span className={hint}>Writes report summaries. Can be the same model.</span>
-        </label>
-      </div>
+      {!showModels ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <input type="hidden" name="agent_model" value={chatModel} />
+          <input type="hidden" name="heavy_model" value={heavyModel} />
+          <span className="text-neutral-600">
+            Models: <span className="font-medium">{chatModel || "none"}</span> for chat,{" "}
+            <span className="font-medium">{heavyModel || "none"}</span> for reports
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowModels(true)}
+            className="text-xs font-normal text-neutral-500 underline"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+        <>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={loadModels}
+            disabled={loadState.busy || !baseUrl}
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium transition-colors hover:border-neutral-500 disabled:opacity-50"
+          >
+            {loadState.busy ? "Loading…" : "Load models"}
+          </button>
+          {loadState.msg && (
+            <span className={`min-w-0 break-words text-xs ${loadState.error ? "text-red-600" : "text-green-700"}`}>
+              {loadState.msg}
+            </span>
+          )}
+        </div>
+
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className={label}>
+            Chat model
+            <ModelSelect
+              key={`chat-${provider.id}`}
+              name="agent_model"
+              value={chatModel}
+              onChange={setChatModel}
+              suggested={provider.chatModel}
+              models={models}
+              className={field}
+            />
+            <span className={hint}>Answers questions. Must support tool calling.</span>
+          </label>
+          <label className={label}>
+            Report model
+            <ModelSelect
+              key={`heavy-${provider.id}`}
+              name="heavy_model"
+              value={heavyModel}
+              onChange={setHeavyModel}
+              suggested={provider.heavyModel}
+              models={models}
+              className={field}
+            />
+            <span className={hint}>Writes report summaries. Can be the same model.</span>
+          </label>
+        </div>
+        </>
+      )}
 
       <details className="rounded-lg border border-neutral-200 p-4">
         <summary className="cursor-pointer text-sm font-medium">
