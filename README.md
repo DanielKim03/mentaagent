@@ -59,7 +59,7 @@ but not for real questions.
 The first build takes a few minutes; later starts take seconds. Your database,
 uploaded files and settings are kept in Docker volumes between restarts.
 
-![The Model & API key page](docs/model-settings.png)
+<img src="docs/model-settings.png" alt="The Model & API key page, with DeepSeek selected" width="420">
 
 ### Good to know
 
