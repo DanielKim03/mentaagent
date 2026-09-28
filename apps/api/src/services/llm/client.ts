@@ -90,15 +90,17 @@ const PRICING_MICROS_PER_MILLION: Record<
     input: 1_000_000,
     output: 1_000_000,
   },
-  // DeepSeek's first-party API (api.deepseek.com). V4 model IDs as of May
-  // 2026; cache-MISS input prices (we can't know the cache-hit ratio
-  // pre-call, so we bill the higher rate — consistent with never
-  // under-charging). The deepseek-chat/deepseek-reasoner aliases (deprecated
-  // 2026-07-24) map to deepseek-v4-flash and share its token pricing.
-  "deepseek-v4-flash": { input: 100_000, output: 200_000 },
-  "deepseek-v4-pro": { input: 1_300_000, output: 2_600_000 },
-  "deepseek-chat": { input: 100_000, output: 200_000 },
-  "deepseek-reasoner": { input: 100_000, output: 200_000 },
+  // DeepSeek's first-party API (api.deepseek.com), pricing page as of
+  // 2026-09-28. Peak-hour, cache-MISS prices (we can't know the time band or
+  // the cache-hit ratio pre-call, so we bill the higher rate — consistent
+  // with never under-charging). deepseek-flash is DeepSeek-V4.1-Flash; the
+  // legacy deepseek-v4-flash (and the older deepseek-chat/deepseek-reasoner
+  // aliases) are served by it and billed at the Flash price.
+  "deepseek-flash": { input: 300_000, output: 1_200_000 },
+  "deepseek-v4-flash": { input: 300_000, output: 1_200_000 },
+  "deepseek-v4-pro": { input: 1_320_000, output: 3_960_000 },
+  "deepseek-chat": { input: 300_000, output: 1_200_000 },
+  "deepseek-reasoner": { input: 300_000, output: 1_200_000 },
   // Same models hosted on DeepInfra (different namespacing). Verified against
   // DeepInfra's published rates Jun 2026: V4-Flash $0.10/$0.20 per M tokens,
   // V4-Pro $1.30/$2.60 per M tokens.

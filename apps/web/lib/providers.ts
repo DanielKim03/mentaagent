@@ -76,7 +76,7 @@ export const PROVIDERS: Provider[] = [
     baseUrl: "https://api.deepseek.com",
     keyUrl: "https://platform.deepseek.com/api_keys",
     needsKey: true,
-    chatModel: "deepseek-v4-flash",
+    chatModel: "deepseek-flash",
     heavyModel: "deepseek-v4-pro",
     embeddingsModel: null,
     visionModel: null,
