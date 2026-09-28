@@ -93,6 +93,10 @@ export default function Chat({
   const taRef = useRef<HTMLTextAreaElement>(null);
   const esRef = useRef<EventSource | null>(null);
   const jumpToBottom = useRef(false);
+  // Follow the answer as it streams, like ChatGPT and Claude: stay pinned to
+  // the bottom until the user scrolls up, and re-pin when they scroll back
+  // down or send a message.
+  const stickToBottom = useRef(true);
   const router = useRouter();
 
   // Load the transcript of the conversation this component was OPENED with.
@@ -163,19 +167,26 @@ export default function Chat({
   }, [initialSessionId]);
 
   // When a past conversation is opened, jump straight to the bottom (most
-  // recent messages). After that, auto-scroll only when already near the
-  // bottom so we don't yank the view while the user reads scrollback.
+  // recent messages). After that, follow new text while pinned. Instant, not
+  // smooth: a smooth scroll falls behind fast deltas and drops the pin when a
+  // large block (a table) arrives at once.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     if (jumpToBottom.current) {
       jumpToBottom.current = false;
-      el.scrollTop = el.scrollHeight; // instant
-      return;
+      stickToBottom.current = true;
     }
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
-    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    if (stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // Only the user's own scrolling changes the pin; content growing doesn't
+  // fire scroll events, and our own scrollTop writes land at the bottom.
+  const onScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  }, []);
 
   // Auto-grow the composer.
   useEffect(() => {
@@ -282,6 +293,7 @@ export default function Chat({
       setError(null);
       setBusy(true);
       setInput("");
+      stickToBottom.current = true;
 
       // Show the user message AND the analyst's "thinking" placeholder
       // immediately — before any network round-trip — so it's always clear
@@ -343,7 +355,7 @@ export default function Chat({
 
   return (
     <div className="flex h-full flex-col">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 py-8">
           {empty ? (
             <div className="mt-[12vh] text-center">

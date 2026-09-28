@@ -1,8 +1,92 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PROVIDERS, providerById, providerForUrl, type Provider } from "@/lib/providers";
 import TestConnectionButton from "@/components/TestConnectionButton";
+
+// Model ids that can't answer chat (embeddings, speech, images, rerankers).
+// Hidden from the chat and report lists; still reachable via "Other…".
+const NOT_CHAT = /(embed|whisper|tts|dall-e|moderation|rerank|transcri|speech|stable-diffusion|flux|sdxl|gpt-image|bge-)/i;
+const OTHER = "__other__";
+
+// A click-to-pick model list: the provider's suggested model first, then
+// every chat model the provider reports (after "Load models"), plus
+// "Other…" for typing a name that isn't listed.
+function ModelSelect({
+  name,
+  value,
+  onChange,
+  suggested,
+  models,
+  className,
+}: {
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  suggested: string;
+  models: string[];
+  className: string;
+}) {
+  const [typing, setTyping] = useState(false);
+  const loaded = models.filter((m) => !NOT_CHAT.test(m) && m !== suggested);
+  const current = value && value !== suggested && !loaded.includes(value) ? value : null;
+
+  if (typing) {
+    return (
+      <span className="flex flex-col gap-1">
+        <input
+          name={name}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Exact model name"
+          autoFocus
+          className={className}
+        />
+        <button
+          type="button"
+          onClick={() => setTyping(false)}
+          className="self-start text-xs font-normal text-neutral-500 underline"
+        >
+          Back to the list
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <select
+      name={name}
+      value={value}
+      onChange={(e) => (e.target.value === OTHER ? setTyping(true) : onChange(e.target.value))}
+      className={className}
+    >
+      {suggested && (
+        <optgroup label="Suggested">
+          <option value={suggested}>{suggested}</option>
+        </optgroup>
+      )}
+      {current && (
+        <optgroup label="Saved">
+          <option value={current}>{current}</option>
+        </optgroup>
+      )}
+      {loaded.length > 0 ? (
+        <optgroup label={`All models from this provider (${loaded.length})`}>
+          {loaded.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </optgroup>
+      ) : (
+        <option disabled value="">
+          Load models to see the full list
+        </option>
+      )}
+      <option value={OTHER}>Other… (type a name)</option>
+    </select>
+  );
+}
 
 export type SavedSettings = {
   provider: string;
@@ -74,6 +158,13 @@ export default function LlmSettingsForm({
     setLoadState({ busy: false });
   }
 
+  // With a key already saved for this provider, fetch its model list right
+  // away so the lists below are ready to click.
+  useEffect(() => {
+    if (saved.llm_api_key_hint && !switched) void loadModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function loadModels() {
     setLoadState({ busy: true });
     try {
@@ -124,6 +215,10 @@ export default function LlmSettingsForm({
           autoComplete="off"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
+          // Pasting a key and moving on loads the provider's models.
+          onBlur={() => {
+            if (apiKey.trim()) void loadModels();
+          }}
           placeholder={
             saved.llm_api_key_hint && !switched
               ? `Saved key ${saved.llm_api_key_hint}. Paste a new one to replace it`
@@ -190,22 +285,26 @@ export default function LlmSettingsForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={label}>
           Chat model
-          <input
+          <ModelSelect
+            key={`chat-${provider.id}`}
             name="agent_model"
-            list="provider-models"
             value={chatModel}
-            onChange={(e) => setChatModel(e.target.value)}
+            onChange={setChatModel}
+            suggested={provider.chatModel}
+            models={models}
             className={field}
           />
           <span className={hint}>Answers questions. Must support tool calling.</span>
         </label>
         <label className={label}>
           Report model
-          <input
+          <ModelSelect
+            key={`heavy-${provider.id}`}
             name="heavy_model"
-            list="provider-models"
             value={heavyModel}
-            onChange={(e) => setHeavyModel(e.target.value)}
+            onChange={setHeavyModel}
+            suggested={provider.heavyModel}
+            models={models}
             className={field}
           />
           <span className={hint}>Writes report summaries. Can be the same model.</span>

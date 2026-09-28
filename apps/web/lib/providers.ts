@@ -6,8 +6,9 @@
 // embeddings: a model returning 1024-dimension vectors (the search index
 // size), or null when the provider has none; search then uses keywords only.
 // vision: a model that can read images, or null (photo uploads are off).
-// Only DeepInfra has been tested end to end; the rest follow each provider's
-// OpenAI-compatibility documentation.
+// Ordered by how widely each provider is used (an estimate, not measured).
+// DeepInfra and DeepSeek have been tested end to end with real keys; the rest
+// follow each provider's OpenAI-compatibility documentation.
 
 export type Provider = {
   id: string;
@@ -23,18 +24,6 @@ export type Provider = {
 };
 
 export const PROVIDERS: Provider[] = [
-  {
-    id: "deepinfra",
-    label: "DeepInfra (recommended, tested)",
-    baseUrl: "https://api.deepinfra.com/v1/openai",
-    keyUrl: "https://deepinfra.com/dash/api_keys",
-    needsKey: true,
-    chatModel: "deepseek-ai/DeepSeek-V4-Flash",
-    heavyModel: "deepseek-ai/DeepSeek-V4-Pro",
-    embeddingsModel: "BAAI/bge-m3",
-    visionModel: "Qwen/Qwen3-VL-30B-A3B-Instruct",
-    note: "One key covers chat, search and reading photos.",
-  },
   {
     id: "openai",
     label: "OpenAI",
@@ -82,6 +71,29 @@ export const PROVIDERS: Provider[] = [
     note: "Search uses keywords only unless you add an embeddings provider under Advanced.",
   },
   {
+    id: "deepseek",
+    label: "DeepSeek (tested)",
+    baseUrl: "https://api.deepseek.com",
+    keyUrl: "https://platform.deepseek.com/api_keys",
+    needsKey: true,
+    chatModel: "deepseek-v4-flash",
+    heavyModel: "deepseek-v4-pro",
+    embeddingsModel: null,
+    visionModel: null,
+    note: "No embeddings or image reading on DeepSeek: search uses keywords only, photo uploads are off.",
+  },
+  {
+    id: "ollama",
+    label: "Ollama (models on your own computer, free)",
+    baseUrl: "http://host.docker.internal:11434/v1",
+    needsKey: false,
+    chatModel: "qwen3",
+    heavyModel: "qwen3",
+    embeddingsModel: "bge-m3",
+    visionModel: null,
+    note: "No key needed. Install Ollama, then run `ollama pull qwen3` and `ollama pull bge-m3`. Pick a model that supports tool calling.",
+  },
+  {
     id: "groq",
     label: "Groq",
     baseUrl: "https://api.groq.com/openai/v1",
@@ -105,18 +117,6 @@ export const PROVIDERS: Provider[] = [
     visionModel: "mistral-small-latest",
   },
   {
-    id: "deepseek",
-    label: "DeepSeek",
-    baseUrl: "https://api.deepseek.com",
-    keyUrl: "https://platform.deepseek.com/api_keys",
-    needsKey: true,
-    chatModel: "deepseek-v4-flash",
-    heavyModel: "deepseek-v4-pro",
-    embeddingsModel: null,
-    visionModel: null,
-    note: "No embeddings or image reading on DeepSeek: search uses keywords only, photo uploads are off.",
-  },
-  {
     id: "together",
     label: "Together AI",
     baseUrl: "https://api.together.xyz/v1",
@@ -128,15 +128,16 @@ export const PROVIDERS: Provider[] = [
     visionModel: null,
   },
   {
-    id: "ollama",
-    label: "Ollama (models on your own computer, free)",
-    baseUrl: "http://host.docker.internal:11434/v1",
-    needsKey: false,
-    chatModel: "qwen3",
-    heavyModel: "qwen3",
-    embeddingsModel: "bge-m3",
-    visionModel: null,
-    note: "No key needed. Install Ollama, then run `ollama pull qwen3` and `ollama pull bge-m3`. Pick a model that supports tool calling.",
+    id: "deepinfra",
+    label: "DeepInfra (recommended, tested)",
+    baseUrl: "https://api.deepinfra.com/v1/openai",
+    keyUrl: "https://deepinfra.com/dash/api_keys",
+    needsKey: true,
+    chatModel: "deepseek-ai/DeepSeek-V4-Flash",
+    heavyModel: "deepseek-ai/DeepSeek-V4-Pro",
+    embeddingsModel: "BAAI/bge-m3",
+    visionModel: "Qwen/Qwen3-VL-30B-A3B-Instruct",
+    note: "One key covers chat, search and reading photos.",
   },
   {
     id: "custom",
