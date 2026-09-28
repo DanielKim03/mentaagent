@@ -85,6 +85,9 @@ export default function Chat({
 }) {
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
+  // True while a past conversation's transcript is being fetched, so the
+  // "new chat" welcome screen doesn't flash up before it arrives.
+  const [loading, setLoading] = useState(Boolean(initialSessionId));
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
@@ -108,8 +111,11 @@ export default function Chat({
   useEffect(() => {
     if (!initialSessionId) return;
     (async () => {
-      const res = await fetch(`/api/proxy/api/sessions/${initialSessionId}`);
-      if (!res.ok) return;
+      const res = await fetch(`/api/proxy/api/sessions/${initialSessionId}`).catch(() => null);
+      if (!res || !res.ok) {
+        setLoading(false);
+        return;
+      }
       const data = (await res.json()) as { messages: ServerMessage[] };
       const display: DisplayMessage[] = [];
       for (const m of data.messages) {
@@ -134,6 +140,7 @@ export default function Chat({
         }
       }
       setMessages(display);
+      setLoading(false);
       jumpToBottom.current = true; // opening a past chat → start at the bottom
 
       // The agent runs in the worker, so a run keeps going even after you
@@ -393,7 +400,7 @@ export default function Chat({
         className="flex-1 overflow-y-auto [overflow-anchor:none]"
       >
         <div className="mx-auto max-w-3xl px-4 py-8">
-          {empty ? (
+          {empty && loading ? null : empty ? (
             <div className="mt-[12vh] text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-600">
                 <Sparkles className="h-6 w-6" />
