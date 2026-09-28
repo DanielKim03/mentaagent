@@ -264,9 +264,7 @@ here.
 
 Built in eight days in June 2026 as a subscription product, stopped before
 launch, and released here as finished work: accounts and billing removed, one
-person per install. There is no hosted version and no company behind it. Most
-of the code was written with [Claude Code](https://claude.com/claude-code);
-the design, testing and decisions are the maintainer's.
+person per install. There is no hosted version and no company behind it.
 
 What works: everything above, tested end to end on a fresh clone with
 `docker compose up`. What is not built: connectors (Google Drive and others),
