@@ -237,7 +237,7 @@ class StubProvider implements AgentProvider {
         JSON.stringify({
           section_key: sectionKey,
           markdown:
-            "Stub section: LLM_API_KEY is not configured. This placeholder proves the report pipeline (orchestrator → loop → tools → sections) works end-to-end.",
+            "Placeholder section: no model key is set, so this report was written by the built-in stub. Add your key on the **Model & API key** page and generate a new report for a real one.",
           score: 50,
           citations: [],
         })
@@ -246,8 +246,9 @@ class StubProvider implements AgentProvider {
 
     const content = canWriteSection
       ? "SECTION COMPLETE"
-      : "LLM_API_KEY is not configured, so this is a stub response. " +
-        "The agent pipeline (queue, loop, tools, streaming, persistence) is working end-to-end.";
+      : "No model key is set yet, so this is a canned answer from the built-in stub. " +
+        "Add your own key on the **Model & API key** page (it takes a few seconds, no restart) " +
+        "and ask again for a real answer.";
     args.onDelta?.(content);
     return {
       content,
