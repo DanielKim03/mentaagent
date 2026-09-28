@@ -40,7 +40,7 @@ const ENTITY_COLORS: Record<string, string> = {
 };
 
 function nodeColor(n: GNode) {
-  return n.kind === "document" ? "#b3aa9c" : ENTITY_COLORS[n.type] ?? "#a99c8b";
+  return n.kind === "document" ? "#bfb6a9" : ENTITY_COLORS[n.type] ?? "#a99c8b";
 }
 function nodeRadius(n: GNode) {
   return n.kind === "document" ? 7 : 5 + Math.min(Math.sqrt(n.weight) * 2, 12);
@@ -193,7 +193,7 @@ export default function GraphView({
                 y1={s.y}
                 x2={t.x}
                 y2={t.y}
-                stroke="#5b5048"
+                stroke="#6a5f56"
                 strokeWidth={1}
                 opacity={faded ? 0.1 : 0.6}
               />

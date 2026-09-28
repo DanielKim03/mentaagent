@@ -12,7 +12,7 @@
    one step darker than panels for depth. */
 body {
   @apply text-neutral-900 antialiased;
-  background-color: #1e1c19;
+  background-color: #2a2723;
   background-image: radial-gradient(
     1100px 620px at 50% -8%,
     rgba(255, 255, 255, 0.025),
@@ -24,14 +24,14 @@ body {
 /* Soft, unobtrusive scrollbars (warm-dark). */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #4d4840 transparent;
+  scrollbar-color: #5c564e transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: #4d4840;
+  background-color: #5c564e;
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-track {
@@ -46,22 +46,22 @@ body {
    underlined links (no clay accent), warm-dark code surfaces. Overrides the
    typography plugin's default light-theme colors. */
 .prose {
-  --tw-prose-body: #cbc0b3;
-  --tw-prose-headings: #f1ece4;
-  --tw-prose-lead: #b3aa9c;
-  --tw-prose-links: #f1ece4;
-  --tw-prose-bold: #f1ece4;
-  --tw-prose-counters: #978e81;
-  --tw-prose-bullets: #6f675b;
-  --tw-prose-hr: #3c3833;
-  --tw-prose-quotes: #e1dace;
-  --tw-prose-quote-borders: #4d4840;
-  --tw-prose-captions: #978e81;
-  --tw-prose-code: #f1ece4;
-  --tw-prose-pre-code: #e1dace;
-  --tw-prose-pre-bg: #2e2a26;
-  --tw-prose-th-borders: #4d4840;
-  --tw-prose-td-borders: #3c3833;
+  --tw-prose-body: #d5cbbf;
+  --tw-prose-headings: #f6f2eb;
+  --tw-prose-lead: #bfb6a9;
+  --tw-prose-links: #f6f2eb;
+  --tw-prose-bold: #f6f2eb;
+  --tw-prose-counters: #a59c8f;
+  --tw-prose-bullets: #80786c;
+  --tw-prose-hr: #4a453f;
+  --tw-prose-quotes: #e9e3d8;
+  --tw-prose-quote-borders: #5c564e;
+  --tw-prose-captions: #a59c8f;
+  --tw-prose-code: #f6f2eb;
+  --tw-prose-pre-code: #e9e3d8;
+  --tw-prose-pre-bg: #3b3732;
+  --tw-prose-th-borders: #5c564e;
+  --tw-prose-td-borders: #4a453f;
 }
 
 /* Tighten the prose used for assistant messages + reports. */

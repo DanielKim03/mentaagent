@@ -27,17 +27,17 @@ const config: Config = {
         // its dark-theme equivalent without rewriting hundreds of classes.
         // Low = darkest surface, high = cream ink.
         neutral: {
-          50: "#262320", // base surface
-          100: "#2e2a26", // raised surface / hover
-          200: "#3c3833", // subtle line / pill
-          300: "#4d4840", // border
-          400: "#6f675b", // faint text / disabled
-          500: "#978e81", // secondary text
-          600: "#b3aa9c", // stronger secondary
-          700: "#cbc0b3", // strong text
-          800: "#e1dace", // near-heading
-          900: "#f1ece4", // headings / primary ink (cream)
-          950: "#1a1816", // deepest
+          50: "#332f2b", // base surface
+          100: "#3b3732", // raised surface / hover
+          200: "#4a453f", // subtle line / pill
+          300: "#5c564e", // border
+          400: "#80786c", // faint text / disabled
+          500: "#a59c8f", // secondary text
+          600: "#bfb6a9", // stronger secondary
+          700: "#d5cbbf", // strong text
+          800: "#e9e3d8", // near-heading
+          900: "#f6f2eb", // headings / primary ink (cream)
+          950: "#252220", // deepest
         },
       },
       fontFamily: {
