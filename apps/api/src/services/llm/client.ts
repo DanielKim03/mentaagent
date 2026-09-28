@@ -47,6 +47,21 @@ export function getChatClient(): OpenAI | null {
   return chatCached.client;
 }
 
+// DeepSeek's first-party API runs V4 models in thinking mode by default.
+// Thinking tokens count against max_tokens and this client never reads
+// reasoning_content, so a turn could spend its whole budget thinking and
+// return an empty answer. Turn thinking off for that host; other
+// OpenAI-compatible hosts get no extra fields.
+function chatRequestExtras(): Record<string, unknown> {
+  let host = "";
+  try {
+    host = new URL(llmConfig().baseUrl).hostname;
+  } catch {
+    return {};
+  }
+  return host === "api.deepseek.com" ? { thinking: { type: "disabled" } } : {};
+}
+
 export function getEmbeddingsClient(): OpenAI | null {
   const c = llmConfig();
   embedCached = cachedClient(embedCached, c.embeddingsBaseUrl, c.embeddingsApiKey, 60_000);
@@ -309,9 +324,10 @@ export async function callLLM(args: {
 
   let completion: OpenAI.Chat.Completions.ChatCompletion;
   try {
-    completion = await client.chat.completions.create(args.params, {
-      timeout: args.timeoutMs ?? 120_000,
-    });
+    completion = await client.chat.completions.create(
+      { ...args.params, ...chatRequestExtras() },
+      { timeout: args.timeoutMs ?? 120_000 }
+    );
   } catch (err) {
     // The call produced no output — drop the reservation so a failed call
     // isn't billed, then surface the original error.
@@ -383,6 +399,7 @@ export async function callLLMStreaming(args: {
     const stream = await client.chat.completions.create(
       {
         ...args.params,
+        ...chatRequestExtras(),
         stream: true,
         stream_options: { include_usage: true },
       },

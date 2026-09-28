@@ -244,6 +244,16 @@ export async function runAgentLoop(args: {
 
     // --- final answer? -------------------------------------------------------
     if (turn.toolCalls.length === 0) {
+      // An empty final turn means the model produced nothing usable (for
+      // example it ran out of output tokens). Say so instead of ending the
+      // run as "done" with no answer.
+      if (!turn.content.trim()) {
+        return {
+          status: "failed",
+          finalText,
+          error: "The model returned an empty answer (it may have run out of output tokens).",
+        };
+      }
       finalText = turn.content;
       return { status: "done", finalText };
     }
